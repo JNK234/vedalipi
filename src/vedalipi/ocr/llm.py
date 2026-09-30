@@ -24,7 +24,20 @@ class Answer:
 
 
 class OcrCallError(RuntimeError):
-    """The model call itself failed (process error, HTTP error, refusal, empty answer)."""
+    """The model call itself failed (process error, HTTP error, refusal, empty answer).
+
+    `cost_usd` is what was billed before or by the failing call, so the pipeline can record the spend.
+    """
+
+    def __init__(self, message: str, cost_usd: float = 0.0) -> None:
+        super().__init__(message)
+        self.cost_usd = cost_usd
+
+
+def _carry_cost(e: Exception, cost: float) -> Exception:
+    """Add money already spent on this page to an exception on its way out."""
+    e.cost_usd = float(getattr(e, "cost_usd", 0.0) or 0.0) + cost  # type: ignore[attr-defined]
+    return e
 
 
 def _env_int(name: str, default: int) -> int:
@@ -74,7 +87,10 @@ class BandedLlmBackend(OcrBackend):
         """Call the model for one band, retrying with feedback while the answer is not parseable."""
         cost, raws, ask = 0.0, [], prompt
         for attempt in range(self.retries + 1):
-            ans = self._ask(image_png, SYSTEM_PROMPT, ask)
+            try:
+                ans = self._ask(image_png, SYSTEM_PROMPT, ask)
+            except Exception as e:
+                raise _carry_cost(e, cost)
             cost += ans.cost_usd
             raws.append(ans.text)
             try:
@@ -82,7 +98,9 @@ class BandedLlmBackend(OcrBackend):
             except OcrParseError as e:
                 print(f"[ocr] {label}: unusable answer (attempt {attempt + 1}): {e}", file=sys.stderr)
                 ask = prompt + "\n\n" + retry_prompt(str(e))
-        raise OcrParseError(f"{label}: no valid JSON after {self.retries + 1} attempts; last answer: {raws[-1][:300]!r}")
+        raise OcrParseError(
+            f"{label}: no valid JSON after {self.retries + 1} attempts; last answer: {raws[-1][:300]!r}", cost_usd=cost
+        )
 
     def read_page(self, image: Path, page: int) -> OcrResult:
         gray = load_gray(image)
@@ -93,7 +111,10 @@ class BandedLlmBackend(OcrBackend):
             for band in bands:
                 png = crop_band(image, band, Path(tmp) / f"band{band.index}.png", max_width=self.max_width)
                 prompt = user_prompt(page, band.index, len(bands), band.top, band.bottom)
-                blocks, c, raw = self.read_band(png, prompt, label=f"page {page} band {band.index}/{len(bands)}")
+                try:
+                    blocks, c, raw = self.read_band(png, prompt, label=f"page {page} band {band.index}/{len(bands)}")
+                except Exception as e:
+                    raise _carry_cost(e, cost)  # earlier bands were billed too
                 results.append((band, blocks))
                 cost += c
                 raws.append(raw)

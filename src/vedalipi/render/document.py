@@ -34,15 +34,85 @@ BODY_EXCLUDED = ("running_header", "page_number")
 PAGE_REF_RE = re.compile(r"^\s*(?:\d+(?:\s*[-–]\s*\d+)?|[ivxlcIVXLC]+)?\s*$")  # \d: digits of any script
 
 
+def is_contents(rows: list[list[str]]) -> bool:
+    """A contents list: at least two columns and page references (or nothing) in the last one."""
+    n = max((len(r) for r in rows), default=1)
+    last = [r[n - 1] if n - 1 < len(r) else "" for r in rows]
+    return n >= 2 and all(PAGE_REF_RE.match(c) for c in last) and any(c.strip() for c in last)
+
+
 def table_layout(rows: list[list[str]]) -> dict:
-    """Column widths and style for a table: a contents list (page refs in the last column) is unruled."""
+    """Column widths and style for a table: a contents list (page refs in the last column) is unruled;
+    any other table is boxed, with its first row set as a header."""
     n = max((len(r) for r in rows), default=1)
     cols = [[r[i] if i < len(r) else "" for r in rows] for i in range(n)]
-    contents = n >= 2 and all(PAGE_REF_RE.match(c) for c in cols[-1]) and any(c.strip() for c in cols[-1])
+    contents = is_contents(rows)
     widths = ["auto" if max((len(c) for c in col), default=0) <= 8 else "1fr" for col in cols]
     if "1fr" not in widths:
         widths = ["1fr"] * n
-    return {"ruled": not contents, "widths": widths, "last_right": contents}
+    return {"ruled": not contents, "widths": widths, "last_right": contents, "header": not contents and len(rows) > 1}
+
+
+def merge_contents(blocks: list[Block]) -> list[Block]:
+    """Rejoin one printed contents list that OCR split up (per band, or English and Sanskrit parts, or
+    sub-entries read as list items): adjacent contents tables with the same column count become one
+    table, and list items next to a contents table become its bullet sub-entry rows. Text is unchanged.
+    Only the layout is unified, so the target and the Devanagari original merge the same way."""
+    out: list[Block] = []
+    pending: list[Block] = []  # list items waiting for a contents table to join
+
+    def ncols(b: Block) -> int:
+        return max((len(r) for r in b.rows or []), default=0)
+
+    def bullet_rows(items: list[Block], n: int) -> list[list[str]]:
+        return [["", "• " + " ".join(i.lines).strip(), *[""] * (n - 2)] for i in items]
+
+    for b in blocks:
+        is_toc = b.type == "table" and b.rows and ncols(b) >= 3 and is_contents(b.rows)
+        prev = out[-1] if out else None
+        prev_toc = prev is not None and prev.type == "table" and ncols(prev) >= 3 and is_contents(prev.rows or [])
+        if b.type == "list_item" and prev_toc and not pending:
+            prev.rows = [*prev.rows, *bullet_rows([b], ncols(prev))]
+            continue
+        if b.type == "list_item":
+            pending.append(b)
+            continue
+        if is_toc and pending:
+            b = b.model_copy(update={"rows": [*bullet_rows(pending, ncols(b)), *b.rows]}, deep=True)
+            pending = []
+        out.extend(pending)
+        pending = []
+        if is_toc and prev_toc and ncols(prev) == ncols(b):
+            prev.rows = [*prev.rows, *b.rows]
+            # Mixed English/Sanskrit contents: Sanskrit wins so the target script is the primary font.
+            if b.is_sanskrit:
+                prev.lang = b.lang
+            continue
+        out.append(b.model_copy(deep=True) if is_toc else b)
+    out.extend(pending)
+    return out
+
+
+# A line that ends a printed sentence or bracketed aside ends a paragraph in prose.
+SENTENCE_END_RE = re.compile(r"[।॥)\]]\s*$")
+
+
+def text_measure(page: Page) -> int:
+    """Characters in the page's longest prose or verse line: roughly what a full printed line holds."""
+    return max((len(ln.strip()) for b in page.blocks if b.type in ("prose", "verse") for ln in b.lines), default=0)
+
+
+def prose_paragraphs(lines: list[str], measure: int = 0) -> list[list[str]]:
+    """Group a prose block's printed lines into paragraphs. A line ending in a danda or bracket, or
+    clearly shorter than a full printed line (`measure` characters, else the block's longest line),
+    ends its paragraph; only true wrapped continuation lines are joined and reflowed."""
+    longest = max(measure, max((len(ln.strip()) for ln in lines), default=0))
+    paras: list[list[str]] = [[]]
+    for ln in lines:
+        paras[-1].append(ln)
+        if SENTENCE_END_RE.search(ln) or len(ln.strip()) < 0.75 * longest:
+            paras.append([])
+    return [p for p in paras if p]
 
 
 def is_edge_artifact(block: Block) -> bool:
@@ -121,7 +191,8 @@ def _font(block: Block, script: str) -> dict:
 
 
 def _block_data(
-    block: Block, orig: Block | None, page: Page, script: str, side_by_side: bool, work_dir: Path, build_dir: Path
+    block: Block, orig: Block | None, page: Page, script: str, side_by_side: bool, work_dir: Path, build_dir: Path,
+    index: int, measure: int = 0,
 ) -> dict:
     d: dict = {"id": block.id, "type": block.type, "align": block.align, "level": block.level or 1, **_font(block, script)}
     d["tight_above"] = d["tight_below"] = False
@@ -135,6 +206,10 @@ def _block_data(
     if show_orig:
         d["orig"] = {"lines": orig.lines, "rows": orig.rows or [], **_font(orig, "devanagari")}
 
+    if block.type == "prose":
+        d["paras"] = prose_paragraphs(block.lines, measure)
+        if d["orig"]:
+            d["orig"]["paras"] = prose_paragraphs(orig.lines, measure)
     if block.type == "fill_blank":
         d["segs"] = [blank_segments(line) for line in block.lines]
         if d["orig"]:
@@ -147,7 +222,8 @@ def _block_data(
         d["image"] = None
         src = find_page_image(work_dir, page)
         if src is not None and block.bbox is not None:
-            rel = Path("img") / f"p{page.page:04d}-{re.sub(r'[^A-Za-z0-9_-]', '_', block.id)}.png"
+            # Named by position, not id: ids like "a/b" and "a?b" would sanitize to the same file.
+            rel = Path("img") / f"p{page.page:04d}-{index:03d}.png"
             crop_image(src, block.bbox, build_dir / rel)
             d["image"] = rel.as_posix()
         x0, _, x1, _ = block.bbox or (0.0, 0.0, 1.0, 1.0)
@@ -172,11 +248,6 @@ def build_document(
     main = script_font(script)
     pages = []
     for page in target.pages:
-        try:
-            orig_page = master.page(page.page)
-            orig_blocks = {b.id: b for b in orig_page.blocks}
-        except KeyError:
-            orig_blocks = {}
         header = [
             {"text": " ".join(b.lines), "align": b.align, **_font(b, script)}
             for b in page.blocks
@@ -188,10 +259,16 @@ def build_document(
             rel = Path("img") / f"p{page.page:04d}-logo.png"
             crop_image(src, logo.bbox, build_dir / rel)
             logo_path = rel.as_posix()
+        body = [b for b in page.blocks if b.type not in BODY_EXCLUDED and b is not logo and not is_edge_artifact(b)]
+        ids = {b.id for b in body}
+        try:
+            # The original is merged over the same blocks so merged ids line up.
+            orig_blocks = {b.id: b for b in merge_contents([b for b in master.page(page.page).blocks if b.id in ids])}
+        except KeyError:
+            orig_blocks = {}
         blocks = [
-            _block_data(b, orig_blocks.get(b.id), page, script, side_by_side, work_dir, build_dir)
-            for b in page.blocks
-            if b.type not in BODY_EXCLUDED and b is not logo and not is_edge_artifact(b)
+            _block_data(b, orig_blocks.get(b.id), page, script, side_by_side, work_dir, build_dir, i, text_measure(page))
+            for i, b in enumerate(merge_contents(body), 1)
         ]
         # Consecutive list items sit closer together, like a printed list.
         for prev, cur in pairwise(blocks):

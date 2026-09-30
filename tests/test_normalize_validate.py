@@ -134,3 +134,29 @@ def test_bbox_selects_region_and_table_rows_flattened(tmp_path):
         blocks=[Block(id="t", type="table", bbox=[0.0, 0.55, 1.0, 1.0], rows=[["ख" + BELOW]])],
     )
     assert validate_page(page, img).block_flags == {}
+
+
+def test_invalid_sign_order_is_flagged_not_fixed():
+    from vedalipi.validate import invalid_sequences
+
+    assert invalid_sequences("सिुद्ध्यर्थं") == ["सिुद"]
+    assert invalid_sequences("क़ि भ॒द्रं कर्णे॑भिः शृणु॒याम॑ देवाः ओं") == []
+    page = Page(page=1, blocks=[Block(id="b1", type="prose", lines=["कार्य सिुद्ध्यर्थं"])])
+    report = validate_page(page, None)
+    assert report.block_flags["b1"] == ["invalid_sequence"]
+    assert page.blocks[0].lines == ["कार्य सिुद्ध्यर्थं"]
+
+
+def test_table_cells_with_several_lines_expand_to_printed_lines():
+    from vedalipi.validate import table_lines
+
+    assert table_lines([["अ\nआ", "इ"], ["उ", "ऊ"]]) == ["अ इ", "आ", "उ ऊ"]
+
+
+def test_second_read_disagreement_is_flagged_per_line():
+    first = Page(page=1, blocks=[Block(id="b1", type="verse", lines=["प॒वि॑त्रं प्र॒जाप॑तेः", "यत् स॑ह॒जं"])])
+    second = Page(page=1, blocks=[Block(id="x", type="verse", lines=["पवित्रं॑ प्र॒जाप॑तेः", "यत् स॑ह॒जं"])])
+    report = validate_page(first, None, second)
+    assert report.block_flags == {"b1": ["reader_disagreement"]}
+    assert any("line 1" in n and "प॒वि॑त्रं / पवित्रं॑" in n for n in report.notes)
+    assert validate_page(first, None, first).block_flags == {}

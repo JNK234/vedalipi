@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from . import pipeline
+from .transliterate import supported_scripts
 from .schema import Correction, Master
 
 
@@ -22,9 +23,11 @@ def _cmd_run(a: argparse.Namespace) -> int:
         backend=a.backend,
         model=a.model,
         force_stages=frozenset(a.force_stage or []),
+        keep_stages=frozenset(a.keep_stage or []),
         dpi=a.dpi,
         upscale=a.upscale,
         side_by_side=a.side_by_side,
+        cross_read=a.cross_read,
     )
     runner, pdf = pipeline.run(cfg)
     print(f"stages run: {len(runner.ran)}, cached: {len(runner.skipped)}, failed: {len(runner.failed)}")
@@ -49,10 +52,11 @@ def _cmd_report(a: argparse.Namespace) -> int:
 
 def _cmd_apply(a: argparse.Namespace) -> int:
     out_dir = Path(a.dir).expanduser().resolve()
-    master = Master.load(out_dir / "master.json")
     data = json.loads(Path(a.corrections).read_text(encoding="utf-8"))
     corrections = [Correction.model_validate(c) for c in (data if isinstance(data, list) else [data])]
-    pipeline.apply_corrections(master, corrections).save(out_dir / "master.json")
+    with pipeline.out_lock(out_dir):
+        master = Master.load(out_dir / "master.json")
+        pipeline.apply_corrections(master, corrections).save(out_dir / "master.json")
     print(f"applied {len(corrections)} correction(s) to {out_dir / 'master.json'}")
     return 0
 
@@ -64,20 +68,27 @@ def build_parser() -> argparse.ArgumentParser:
     r = sub.add_parser("run", help="OCR/ingest INPUT, build master.json, render the target script")
     r.add_argument("input", help="scanned PDF, folder of page images, or Devanagari .txt/.json")
     r.add_argument("--out", required=True, help="output directory (cache lives in OUT/work)")
-    r.add_argument("--script", default="kannada", help="target script (default kannada)")
+    r.add_argument("--script", default="kannada", choices=supported_scripts(), metavar="SCRIPT",
+                   help="target script: kannada (default), telugu, or any vidyut script name")
     r.add_argument("--pages", help='page selection, e.g. "1-5,8"')
     r.add_argument("--jobs", type=int, default=4, help="pages processed concurrently")
     r.add_argument("--backend", default="claude-cli", help="OCR backend: claude-cli, anthropic-api, gemini-api")
     r.add_argument("--model", default="claude-opus-5-5", help="OCR model name for the backend")
     r.add_argument("--force-stage", action="append", metavar="STAGE", help="redo a stage (repeatable)")
+    r.add_argument("--keep-stage", action="append", metavar="STAGE",
+                   help="reuse a stage's existing outputs even if its settings changed, e.g. keep OCR made with "
+                        "an older prompt (repeatable)")
     r.add_argument("--dpi", type=int, default=300, help="rasterization DPI for vector PDFs")
     r.add_argument("--upscale", type=float, default=1.5, help="preprocess upscale factor")
     r.add_argument("--side-by-side", action="store_true", help="typeset Devanagari next to the target script")
+    r.add_argument("--cross-read", action="store_true",
+                   help="OCR every page a second time and flag lines the two reads disagree on (doubles OCR cost)")
     r.set_defaults(func=_cmd_run)
 
     rd = sub.add_parser("render", help="re-render from DIR/master.json only (no OCR)")
     rd.add_argument("dir")
-    rd.add_argument("--script", default="kannada")
+    rd.add_argument("--script", default="kannada", choices=supported_scripts(), metavar="SCRIPT",
+                    help="target script: kannada (default), telugu, or any vidyut script name")
     rd.add_argument("--side-by-side", action="store_true")
     rd.set_defaults(func=_cmd_render)
 
@@ -94,7 +105,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except RuntimeError as e:  # e.g. another process holds the output directory
+        print(f"vedalipi: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

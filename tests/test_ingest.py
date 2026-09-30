@@ -108,3 +108,28 @@ def test_json_inputs_single_list_and_master(tmp_path):
     bad.write_text('{"nothing": 1}', encoding="utf-8")
     with pytest.raises(ValueError):
         ingest.load_text_pages(bad)
+
+
+def test_pdf_scan_with_overlay_or_transform_is_rendered_not_extracted(tmp_path):
+    import pymupdf
+
+    src = tmp_path / "scan.png"
+    make_page_image(src, w=80, h=60, color=(100, 100, 100))
+    doc = pymupdf.open()
+    captioned = doc.new_page(width=400, height=300)
+    captioned.insert_image(captioned.rect, filename=str(src))
+    captioned.insert_text((20, 280), "added caption", fontsize=12)  # visible text drawn over the scan
+    rotated = doc.new_page(width=400, height=300)
+    rotated.insert_image(rotated.rect, filename=str(src), rotate=180)  # image matrix flips the raster
+    plain = doc.new_page(width=400, height=300)
+    plain.insert_image(plain.rect, filename=str(src))
+    plain.insert_text((20, 280), "hidden OCR layer", fontsize=12, render_mode=3)  # invisible text is fine
+    pdf = tmp_path / "mixed.pdf"
+    doc.save(pdf)
+    with pymupdf.open(pdf) as d:
+        assert ingest._raster_only(d[0]) is None
+        assert ingest._raster_only(d[1]) is None
+        assert ingest._raster_only(d[2]) is not None
+    out = tmp_path / "p1.png"
+    ingest.extract_page(pdf, 1, out, dpi=72)
+    assert Image.open(out).size == (400, 300)  # rendered page, caption included

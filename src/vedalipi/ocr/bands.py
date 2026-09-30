@@ -21,6 +21,9 @@ SEAM_WINDOW = 8
 MERGEABLE = {"prose", "verse", "table"}
 # Slack (fraction of page height) on model bboxes when deciding whether a block can reach the band overlap.
 GEO_MARGIN = 0.03
+# An unmatched seam line counts as a clipped reading of its neighbour's line only if at least this share
+# of its characters appear, in order, in that full line.
+CLIP_EVIDENCE = 0.5
 
 
 @dataclass
@@ -141,6 +144,20 @@ class Seam:
     drop_next: int = 0  # units to remove from the head of the lower band
     drop_prev: int = 0  # units to remove from the tail of what is stitched so far (a clipped fragment)
     pairs: list[tuple[str, str]] = field(default_factory=list)  # keys of the lines read twice
+    # An unmatched line next to the seam that could not be shown to be a clipped fragment: kept, but suspect.
+    suspect_prev: bool = False
+    suspect_next: bool = False
+
+
+def clipped(fragment: str, full: str | None) -> bool:
+    """Evidence that `fragment` is a partial reading of the printed line read in full as `full`:
+    it is empty, or most of its characters occur in order in `full`."""
+    if not fragment:
+        return True
+    if not full:
+        return False
+    sm = difflib.SequenceMatcher(None, fragment, full, autojunk=False)
+    return sum(m.size for m in sm.get_matching_blocks()) >= CLIP_EVIDENCE * len(fragment)
 
 
 def _near_seam(units, blocks: list[Block], ok) -> list:
@@ -167,22 +184,31 @@ def seam_overlap(prev: list[Block], nxt: list[Block], upper: Band | None = None,
         nu = _near_seam(nu, nxt, lambda bb: bb is None or bb[1] <= upper.bottom + GEO_MARGIN)
     pu = list(reversed(pu[:SEAM_WINDOW]))
     nu = nu[:SEAM_WINDOW]
-    best = (0, 0, 0)  # (matched, skip_head_of_next, skip_tail_of_prev)
+    all_next = _units(nxt)
+    found = []  # (matched, skip_head_of_next, skip_tail_of_prev), the longest match per skip choice
     for s in (0, 1):
         for t in (0, 1):
             tail = pu[: len(pu) - t]
             for k in range(min(len(tail), len(nu) - s), 0, -1):
-                if k <= best[0]:
-                    break
                 if all(_same(tail[len(tail) - k + i][2], nu[s + i][2]) for i in range(k)):
-                    best = (k, s, t)
+                    found.append((k, s, t))
                     break
-    k, s, t = best
-    if k == 0:
-        return Seam()
-    tail = pu[: len(pu) - t]
-    pairs = [(tail[len(tail) - k + i][2], nu[s + i][2]) for i in range(k)]
-    return Seam(drop_next=s + k, drop_prev=t, pairs=pairs)
+    # Longest match first; among equals, the one that skips fewer lines.
+    found.sort(key=lambda c: (-c[0], c[1] + c[2]))
+    seam = Seam()
+    for k, s, t in found:
+        tail = pu[: len(pu) - t]
+        # A skipped line is only dropped as a clipped fragment when there is evidence for it: its full
+        # reading is the line on the other side of the matched run. Without evidence it may be real text.
+        ok_prev = not t or clipped(pu[-1][2], all_next[s + k][2] if s + k < len(all_next) else None)
+        ok_next = not s or clipped(nu[0][2], tail[len(tail) - k - 1][2] if len(tail) > k else None)
+        if ok_prev and ok_next:
+            pairs = [(tail[len(tail) - k + i][2], nu[s + i][2]) for i in range(k)]
+            return Seam(drop_next=s + k, drop_prev=t, pairs=pairs,
+                        suspect_prev=seam.suspect_prev, suspect_next=seam.suspect_next)
+        seam.suspect_prev = seam.suspect_prev or not ok_prev
+        seam.suspect_next = seam.suspect_next or not ok_next
+    return seam
 
 
 def _drop_units(blocks: list[Block], n: int, *, from_end: bool = False) -> list[Block]:
@@ -256,6 +282,10 @@ def stitch(bands: list[tuple[Band, list[Block]]]) -> list[Block]:
                 for bi, _, key in _units(page)[-SEAM_WINDOW:]:
                     if key in disagreeing:
                         page[bi].add_flag(FLAG_LOW_CONFIDENCE)
+            if seam.suspect_prev and page:
+                page[_units(page)[-1][0]].add_flag(FLAG_LOW_CONFIDENCE)
+            if seam.suspect_next and _units(blocks):
+                blocks[_units(blocks)[0][0]].add_flag(FLAG_LOW_CONFIDENCE)
             page = _drop_units(page, seam.drop_prev, from_end=True)
             blocks = _merge_images(page, _drop_units(blocks, seam.drop_next))
             if page and blocks and _mergeable(page[-1], blocks[0]):

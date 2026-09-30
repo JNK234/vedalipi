@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
 import os
 import sys
 import tempfile
@@ -12,7 +14,7 @@ from pathlib import Path
 
 import anthropic
 
-from ..schema import Page
+from ..schema import Page, atomic_write_text
 from .bands import crop_band, load_gray, plan_bands, stitch
 from .base import OcrResult
 from .llm import Answer, BandedLlmBackend, OcrCallError
@@ -98,13 +100,23 @@ class AnthropicApiBackend(BandedLlmBackend):
             raise OcrCallError(f"Anthropic API error {e.status_code}: {e.message}") from e
         except anthropic.APIConnectionError as e:
             raise OcrCallError(f"Anthropic API connection error: {e}") from e
-        return Answer(text=self._text(msg), cost_usd=usage_cost(msg.model, msg.usage))
+        cost = usage_cost(msg.model, msg.usage)
+        try:
+            return Answer(text=self._text(msg), cost_usd=cost)
+        except OcrCallError as e:
+            e.cost_usd += cost  # a refusal or truncated answer is still billed
+            raise
 
-    def read_pages_batch(self, pages: list[tuple[Path, int]], *, poll_seconds: float = 30.0) -> dict[int, OcrResult]:
+    def read_pages_batch(
+        self, pages: list[tuple[Path, int]], *, poll_seconds: float = 30.0, checkpoint: Path | None = None
+    ) -> dict[int, OcrResult]:
         """OCR many pages through one Message Batch (50% price, results within 24h).
 
         Bands whose batch result is missing or unparseable are re-read synchronously with retries.
         Returns {page: OcrResult}. Page images are read one at a time; only band PNGs are held on disk.
+        With `checkpoint` (a JSON file), submitted batch ids are recorded as soon as each batch is created,
+        keyed by the backend fingerprint and the exact band images; an interrupted call re-run with the
+        same inputs collects those batches instead of paying for them again.
         """
         plans: dict[int, list] = {}
         pngs: dict[str, tuple[Path, str]] = {}
@@ -116,11 +128,22 @@ class AnthropicApiBackend(BandedLlmBackend):
                     cid = f"p{page:05d}-b{band.index:02d}"
                     png = crop_band(image, band, Path(tmp) / f"{cid}.png", max_width=self.max_width)
                     pngs[cid] = (png, user_prompt(page, band.index, len(bands), band.top, band.bottom))
-            # Submit in chunks so no single batch (or our memory) holds more than ~BATCH_BYTES of images.
-            batch_ids, chunk, size = [], [], 0
-            overhead = len(SYSTEM_PROMPT.encode()) + 2000
-            last = next(reversed(pngs))
+            key = hashlib.sha256(self.fingerprint().encode())
             for cid, (png, prompt) in pngs.items():
+                key.update(f"{cid}:{prompt}:".encode() + hashlib.sha256(png.read_bytes()).digest())
+            state = {"key": key.hexdigest(), "batches": []}
+            if checkpoint is not None and Path(checkpoint).exists():
+                saved = json.loads(Path(checkpoint).read_text(encoding="utf-8"))
+                if saved.get("key") == state["key"]:
+                    state = saved
+                    print(f"[ocr] resuming {len(state['batches'])} batch(es) from {checkpoint}", file=sys.stderr)
+            done_cids = {c for b in state["batches"] for c in b["cids"]}
+            todo = {cid: v for cid, v in pngs.items() if cid not in done_cids}
+            # Submit in chunks so no single batch (or our memory) holds more than ~BATCH_BYTES of images.
+            batch_ids, chunk, size = [b["id"] for b in state["batches"]], [], 0
+            overhead = len(SYSTEM_PROMPT.encode()) + 2000
+            last = next(reversed(todo), None)
+            for cid, (png, prompt) in todo.items():
                 chunk.append((cid, png, prompt))
                 # base64 image + repeated system prompt + per-request prompt and JSON framing
                 size += png.stat().st_size * 4 // 3 + overhead + len(prompt.encode())
@@ -129,6 +152,9 @@ class AnthropicApiBackend(BandedLlmBackend):
                     batch = self.client.messages.batches.create(requests=reqs)
                     print(f"[ocr] batch {batch.id}: {len(reqs)} band requests submitted", file=sys.stderr)
                     batch_ids.append(batch.id)
+                    if checkpoint is not None:
+                        state["batches"].append({"id": batch.id, "cids": [c for c, _, _ in chunk]})
+                        atomic_write_text(Path(checkpoint), json.dumps(state, indent=1) + "\n")
                     chunk, size = [], 0
                     del reqs
             pending = set(batch_ids)

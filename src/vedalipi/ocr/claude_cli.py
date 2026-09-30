@@ -73,10 +73,10 @@ class ClaudeCliBackend(BandedLlmBackend):
             raise OcrCallError(f"claude CLI produced no result event: {stdout[-500:]!r}")
         cost = float(result.get("total_cost_usd") or 0.0)
         if result.get("is_error") or result.get("subtype", "success") != "success":
-            raise OcrCallError(f"claude CLI error ({result.get('subtype')}): {str(result.get('result'))[:500]}")
+            raise OcrCallError(f"claude CLI error ({result.get('subtype')}): {str(result.get('result'))[:500]}", cost)
         text = result.get("result") or ""
         if not text.strip():
-            raise OcrCallError("claude CLI returned an empty answer")
+            raise OcrCallError("claude CLI returned an empty answer", cost)
         return Answer(text=text, cost_usd=cost)
 
     def _ask(self, image_png: Path, system: str, prompt: str) -> Answer:

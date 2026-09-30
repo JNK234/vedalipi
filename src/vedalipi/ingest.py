@@ -55,13 +55,38 @@ def page_count(path: Path) -> int:
 
 
 def _write_png(data: bytes, dst: Path) -> None:
-    """Re-encode arbitrary image bytes (e.g. JPEG from a pdf) as a PNG at dst."""
+    """Re-encode arbitrary image bytes (e.g. JPEG from a pdf) as a PNG at dst, atomically."""
     from io import BytesIO
 
     from PIL import Image
 
+    tmp = dst.with_name(f".{dst.name}.tmp")
     with Image.open(BytesIO(data)) as im:
-        im.save(dst, format="PNG")
+        im.save(tmp, format="PNG")
+    tmp.replace(dst)
+
+
+def _raster_only(p) -> int | None:
+    """xref of the page's single image when the page is exactly that raster, drawn upright and unflipped
+    over the whole page, with no visible text or vector drawing on top; otherwise None."""
+    images = p.get_images(full=True)
+    if p.rotation != 0 or len(images) != 1:
+        return None
+    xref = images[0][0]
+    placed = p.get_image_rects(xref, transform=True)
+    if len(placed) != 1:
+        return None
+    rect, m = placed[0]
+    # Axis-aligned, positive scale: no rotation, skew or mirroring applied by the image matrix.
+    if abs(m.b) > 1e-6 or abs(m.c) > 1e-6 or m.a <= 0 or m.d <= 0:
+        return None
+    if rect.width < p.rect.width - 1 or rect.height < p.rect.height - 1:
+        return None
+    # Anything drawn over the scan (a caption, a stamp, a rule) exists only in the rendered page.
+    # Invisible text (render mode 3, an OCR layer) changes nothing on screen and is allowed.
+    if p.get_drawings() or any(span.get("type") != 3 for span in p.get_texttrace()):
+        return None
+    return xref
 
 
 def extract_page(path: Path, page: int, dst: Path, *, dpi: int = 300) -> None:
@@ -87,16 +112,15 @@ def extract_page(path: Path, page: int, dst: Path, *, dpi: int = 300) -> None:
         if not 1 <= page <= doc.page_count:
             raise ValueError(f"page {page} outside 1-{doc.page_count}")
         p = doc[page - 1]
-        # Native path: the page is exactly one raster covering it (a plain scan). Only for
-        # unrotated pages so the extracted image matches what the reader displays.
-        images = p.get_images(full=True)
-        rects = p.get_image_rects(images[0][0]) if p.rotation == 0 and len(images) == 1 else []
-        if len(rects) == 1 and rects[0].width >= p.rect.width - 1 and rects[0].height >= p.rect.height - 1:
-            raw = doc.extract_image(images[0][0])
-            _write_png(raw["image"], dst)
+        # Native path: the page is exactly one untransformed raster covering it (a plain scan), so the
+        # extracted image matches what the reader displays at full resolution. Anything else is rendered.
+        xref = _raster_only(p)
+        if xref is not None:
+            _write_png(doc.extract_image(xref)["image"], dst)
             return
-        pix = p.get_pixmap(dpi=dpi)
-        pix.save(dst)
+        tmp = dst.with_name(f".{dst.name}.tmp.png")
+        p.get_pixmap(dpi=dpi).save(tmp)
+        tmp.replace(dst)
 
 
 def _pages_from_text(text: str) -> list[Page]:

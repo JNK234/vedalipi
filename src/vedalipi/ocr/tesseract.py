@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 import subprocess
 import unicodedata
 from pathlib import Path
@@ -30,8 +32,27 @@ class TesseractBackend(OcrBackend):
         self.tessdata = os.environ.get("VEDALIPI_TESSDATA")
         self.psm = os.environ.get("VEDALIPI_TESS_PSM", "4")
 
+    def traineddata(self) -> Path | None:
+        """The .traineddata file tesseract will load for self.model, or None if it cannot be located."""
+        if self.tessdata:
+            base = Path(self.tessdata)
+        else:
+            try:
+                proc = subprocess.run(["tesseract", "--list-langs"], capture_output=True, text=True, timeout=60)
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                return None
+            m = re.search(r'"([^"]+)"', proc.stdout + proc.stderr)
+            if not m:
+                return None
+            base = Path(m.group(1))
+        path = base / f"{self.model}.traineddata"
+        return path if path.is_file() else None
+
     def fingerprint(self) -> str:
-        return f"{self.name}:{self.model}:psm{self.psm}"
+        # The model file itself, not just its name: replacing it under the same name must redo OCR.
+        path = self.traineddata()
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()[:16] if path else "missing"
+        return f"{self.name}:{self.model}:{digest}:psm{self.psm}"
 
     def read_page(self, image: Path, page: int) -> OcrResult:
         image = Path(image).resolve()

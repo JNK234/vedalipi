@@ -55,5 +55,5 @@ class GeminiApiBackend(BandedLlmBackend):
         text = resp.text or ""
         if not text.strip():
             reason = resp.candidates[0].finish_reason if resp.candidates else "no candidates"
-            raise OcrCallError(f"Gemini returned no text ({reason})")
+            raise OcrCallError(f"Gemini returned no text ({reason})", cost)
         return Answer(text=text, cost_usd=cost)

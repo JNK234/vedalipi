@@ -1,16 +1,18 @@
 # ABOUTME: Validate stage: cross-checks normalized text against the page image and flags suspect lines.
-# ABOUTME: Image-based svara mark counting per line produces "svara_count_mismatch" flags in flags.json.
+# ABOUTME: Svara marks counted per image line give "svara_count_mismatch"; impossible sign orders give "invalid_sequence".
 
 from __future__ import annotations
 
+import difflib
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .schema import FLAG_SVARA_COUNT_MISMATCH, FlagReport, Page
+from .normalize import normalize_text
+from .schema import FLAG_INVALID_SEQUENCE, FLAG_READER_DISAGREEMENT, FLAG_SVARA_COUNT_MISMATCH, FlagReport, Page
 
 # Part of the validate stage fingerprint: bump when the checks change so cached flags are redone.
-VALIDATE_VERSION = "2"
+VALIDATE_VERSION = "3"
 
 # Text codepoints counted as marks above / below the line.
 _ABOVE = {"॑", "᳚"}  # svarita stroke, double svarita
@@ -30,6 +32,33 @@ def _text_counts(line: str) -> tuple[int, int]:
     above = sum(1 for ch in line if ch in _ABOVE)
     below = sum(1 for ch in line if ch in _BELOW)
     return above, below
+
+
+def _is_consonant(ch: str) -> bool:
+    o = ord(ch)
+    return 0x0915 <= o <= 0x0939 or 0x0958 <= o <= 0x095F or 0x0978 <= o <= 0x097F
+
+
+def _is_vowel_sign(ch: str) -> bool:
+    o = ord(ch)
+    return 0x093A <= o <= 0x094C and o not in (0x093C, 0x093D) or o in (0x094E, 0x094F) or 0x0955 <= o <= 0x0957 or o in (0x0962, 0x0963)
+
+
+def invalid_sequences(line: str) -> list[str]:
+    """Devanagari sign orders no word can have, e.g. two vowel signs on one letter (सिु) or a vowel sign
+    after a virama. These are printing glitches or misreadings; they are reported, never auto-corrected,
+    and fonts often drop the second sign silently."""
+    bad = []
+    for i, ch in enumerate(line):
+        if ch == "्" and (i == 0 or not (_is_consonant(line[i - 1]) or line[i - 1] == "़")):
+            bad.append(line[max(0, i - 2) : i + 2])
+        if not _is_vowel_sign(ch):
+            continue
+        prev = line[i - 1] if i else ""
+        # A vowel sign sits on a consonant, or on a nukta that sits on one.
+        if not (_is_consonant(prev) or (prev == "़" and i > 1 and _is_consonant(line[i - 2]))):
+            bad.append(line[max(0, i - 2) : i + 2])
+    return bad
 
 
 def _orphan_marks(line: str) -> int:
@@ -186,25 +215,89 @@ def _pick_lines(lines: list[_Line], y0: float, y1: float, want: int, pad: float)
     return None
 
 
+def table_lines(rows: list[list[str]]) -> list[str]:
+    """One entry per printed line of a table: a row whose cells hold several lines ("\n") spans that many
+    printed lines, and printed line k joins the k-th line of every cell."""
+    out = []
+    for row in rows:
+        cells = [c.split("\n") for c in row]
+        for k in range(max((len(c) for c in cells), default=0)):
+            out.append(" ".join(c[k] for c in cells if k < len(c)))
+    return out
+
+
 # Block types that never carry svaras (checking them only produces noise from rules and logos).
 _SKIP_TYPES = {"running_header", "page_number", "image", "separator"}
 
 
-def validate_page(page: Page, image: Path | None) -> FlagReport:
+def _sa_lines(page: Page) -> list[tuple[str, int, str]]:
+    """(block id, line number, normalized text) for every checkable Sanskrit line in reading order."""
+    out = []
+    for b in page.blocks:
+        if b.lang != "sa" or b.type in _SKIP_TYPES:
+            continue
+        for i, line in enumerate(b.lines or table_lines(b.rows or []), 1):
+            if line.strip():
+                out.append((b.id, i, normalize_text(line)))
+    return out
+
+
+def _key(line: str) -> str:
+    return "".join(line.split())
+
+
+def _word_diff(a: str, b: str) -> str:
+    wa, wb = a.split(), b.split()
+    parts = []
+    for op, i0, i1, j0, j1 in difflib.SequenceMatcher(None, wa, wb, autojunk=False).get_opcodes():
+        if op != "equal":
+            parts.append(f"{' '.join(wa[i0:i1]) or '∅'} / {' '.join(wb[j0:j1]) or '∅'}")
+    return "; ".join(parts[:6])
+
+
+def cross_check(page: Page, second: Page) -> list[tuple[str, str]]:
+    """Compare the page with an independent second OCR read of the same image, line by line.
+
+    Returns (block id, note) for every line the two reads give differently. A per-line mark count cannot
+    see a mark put on the wrong akshara or a remembered word; two readers rarely make the same slip.
+    Lines only one read has are left to the other checks (band seams and block splits differ between reads).
+    """
+    a, b = _sa_lines(page), _sa_lines(second)
+    ka, kb = [_key(x[2]) for x in a], [_key(x[2]) for x in b]
+    out = []
+    for op, i0, i1, j0, j1 in difflib.SequenceMatcher(None, ka, kb, autojunk=False).get_opcodes():
+        if op != "replace":
+            continue
+        # Pair each differing line with its most similar counterpart in the other read.
+        for i in range(i0, i1):
+            best = max(range(j0, j1), key=lambda j: difflib.SequenceMatcher(None, ka[i], kb[j], autojunk=False).ratio())
+            if difflib.SequenceMatcher(None, ka[i], kb[best], autojunk=False).ratio() < 0.6:
+                continue
+            bid, n, text = a[i]
+            out.append((bid, f"{bid} line {n}: second read differs: {_word_diff(text, b[best][2])}"))
+    return out
+
+
+def validate_page(page: Page, image: Path | None, second: Page | None = None) -> FlagReport:
     """Check a normalized page and return flags per block id.
 
     With an image: for each sa line, locate its region (block bbox split into lines), count stroke
     marks above the headline and below the baseline, and compare with counts of U+0951+U+1CDA and
     U+0952 in the text; a mismatch adds "svara_count_mismatch". Without an image (text input),
-    only text-level checks run (e.g. invalid mark sequences).
+    only text-level checks run (e.g. invalid mark sequences). With `second` (an independent second OCR
+    read of the same image), every line the two reads disagree on gets "reader_disagreement".
     """
     report = FlagReport(page=page.page)
 
-    def flag(block_id: str, note: str) -> None:
+    def flag(block_id: str, note: str, name: str = FLAG_SVARA_COUNT_MISMATCH) -> None:
         report.block_flags.setdefault(block_id, [])
-        if FLAG_SVARA_COUNT_MISMATCH not in report.block_flags[block_id]:
-            report.block_flags[block_id].append(FLAG_SVARA_COUNT_MISMATCH)
+        if name not in report.block_flags[block_id]:
+            report.block_flags[block_id].append(name)
         report.notes.append(note)
+
+    if second is not None:
+        for block_id, note in cross_check(page, second):
+            flag(block_id, note, FLAG_READER_DISAGREEMENT)
 
     lines_img: list[_Line] = []
     xb = 0.0
@@ -224,12 +317,14 @@ def validate_page(page: Page, image: Path | None) -> FlagReport:
             continue
         lines = list(block.lines)
         if not lines and block.rows:
-            lines = [" ".join(row) for row in block.rows]
+            lines = table_lines(block.rows)
         if not lines:
             continue
         for i, line in enumerate(lines):
             if _orphan_marks(line):
                 flag(block.id, f"{block.id} line {i + 1}: orphan combining mark (no base character)")
+            for seq in invalid_sequences(line):
+                flag(block.id, f"{block.id} line {i + 1}: invalid sign order {seq!r}", FLAG_INVALID_SEQUENCE)
         if not lines_img:
             continue
         if block.bbox:

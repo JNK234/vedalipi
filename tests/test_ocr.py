@@ -255,3 +255,104 @@ def test_read_page_two_bands_stitched(tmp_path):
     res = be.read_page(_page_png(tmp_path), 1)
     assert [b.lines for b in res.page.blocks] == [["l1", "l2", "l3"]]
     assert "band 2 of 2" in be.prompts[1]
+
+
+# ---------- review fixes ----------
+
+def test_trailing_comma_repair_leaves_strings_alone():
+    data = extract_json('{"blocks": [{"type": "prose", "lines": ["literal ,] retained", "a \\" ,} b"],},]}')
+    assert data["blocks"][0]["lines"] == ["literal ,] retained", 'a " ,} b']
+
+
+def test_blocks_list_with_non_object_entries_is_rejected():
+    with pytest.raises(OcrParseError):
+        parse_blocks('{"blocks": [{"type": "prose", "lines": ["a"]}, "stray text line", null]}')
+
+
+def test_seam_keeps_unmatched_line_without_clipping_evidence():
+    """[refrain, unique] above and [refrain, different] below: "unique" is not a clipped "different"."""
+    top, bot = Band(1, 0, 600, 1000), Band(2, 500, 1000, 1000)
+    a = [B(1, "verse", ["अग्निमीळे पुरोहितं", "यज्ञस्य देवमृत्विजम्"])]
+    b = [B(1, "verse", ["अग्निमीळे पुरोहितं", "होतारं रत्नधातमम्"])]
+    page = stitch([(top, a), (bot, b)])
+    lines = [ln for blk in page for ln in blk.lines]
+    assert "यज्ञस्य देवमृत्विजम्" in lines and "होतारं रत्नधातमम्" in lines
+    assert "low_confidence" in page[0].flags
+
+
+def test_cli_error_result_carries_its_cost():
+    stream = json.dumps({"type": "result", "subtype": "error_max_turns", "is_error": True,
+                         "result": "", "total_cost_usd": 0.31})
+    with pytest.raises(OcrCallError) as e:
+        ClaudeCliBackend.parse_stream(stream)
+    assert e.value.cost_usd == pytest.approx(0.31)
+
+
+def test_exhausted_retries_carry_the_spend(tmp_path):
+    be = Scripted(["x", "y"], bands=1, retries=1)
+    with pytest.raises(OcrParseError) as e:
+        be.read_page(_page_png(tmp_path), 1)
+    assert e.value.cost_usd == pytest.approx(0.10)
+
+
+def test_later_band_failure_carries_earlier_band_cost(tmp_path):
+    class FailSecond(Scripted):
+        def _ask(self, image_png, system, prompt):
+            if "band 2" in prompt:
+                raise OcrCallError("boom", 0.07)
+            return super()._ask(image_png, system, prompt)
+
+    be = FailSecond(['{"blocks": [{"type": "prose", "lines": ["a"]}]}'], bands=2)
+    with pytest.raises(OcrCallError) as e:
+        be.read_page(_page_png(tmp_path), 1)
+    assert e.value.cost_usd == pytest.approx(0.12)
+
+
+def test_tesseract_fingerprint_follows_model_file(tmp_path, monkeypatch):
+    from vedalipi.ocr.tesseract import TesseractBackend
+
+    monkeypatch.setenv("VEDALIPI_TESSDATA", str(tmp_path))
+    (tmp_path / "san.traineddata").write_bytes(b"model one")
+    a = TesseractBackend("san").fingerprint()
+    (tmp_path / "san.traineddata").write_bytes(b"model two")
+    assert TesseractBackend("san").fingerprint() != a
+
+
+def test_batch_checkpoint_resumes_submitted_batches(tmp_path):
+    """An interrupted batch run re-run with the same pages collects the batches it already paid for."""
+    from types import SimpleNamespace
+
+    from vedalipi.ocr.anthropic_api import AnthropicApiBackend
+
+    answer = '{"blocks": [{"type": "prose", "lines": ["अ"]}]}'
+
+    class Batches:
+        def __init__(self):
+            self.created, self.ids = 0, {}
+
+        def create(self, requests):
+            self.created += 1
+            bid = f"batch{self.created}"
+            self.ids[bid] = [r["custom_id"] for r in requests]
+            return SimpleNamespace(id=bid)
+
+        def retrieve(self, bid):
+            return SimpleNamespace(processing_status="ended")
+
+        def results(self, bid):
+            usage = SimpleNamespace(input_tokens=10, output_tokens=10, cache_creation_input_tokens=0, cache_read_input_tokens=0)
+            msg = SimpleNamespace(stop_reason="end_turn", model="claude-opus-5-5", usage=usage,
+                                  content=[SimpleNamespace(type="text", text=answer)])
+            return [SimpleNamespace(custom_id=c, result=SimpleNamespace(type="succeeded", message=msg)) for c in self.ids[bid]]
+
+    batches = Batches()
+    be = AnthropicApiBackend.__new__(AnthropicApiBackend)
+    BandedLlmBackend.__init__(be, "claude-opus-5-5", bands=1)
+    be.effort = "medium"
+    be.client = SimpleNamespace(messages=SimpleNamespace(batches=batches))
+    png = _page_png(tmp_path)
+    ck = tmp_path / "batch.json"
+    first = be.read_pages_batch([(png, 1)], poll_seconds=0, checkpoint=ck)
+    second = be.read_pages_batch([(png, 1)], poll_seconds=0, checkpoint=ck)
+    assert batches.created == 1
+    assert first[1].page.blocks[0].lines == second[1].page.blocks[0].lines == ["अ"]

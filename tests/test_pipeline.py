@@ -228,3 +228,122 @@ def test_build_master_refreshes_flags_but_keeps_corrected_text(tmp_path):
     master = build_master(cfg, [1])
     assert master.page(1).blocks[0].lines == ["ख"]
     assert master.page(1).blocks[0].flags == []
+
+
+def test_corrupt_page_cache_is_skipped_not_fatal(tmp_path):
+    cfg = make_cfg(tmp_path)
+    write_norm(cfg, 1, "अ")
+    write_norm(cfg, 2, "आ")
+    (pipeline.page_dir(cfg.work_dir, 1) / pipeline.NORM_JSON).write_text("{corrupt", encoding="utf-8")
+    errors: list = []
+    master = pipeline.build_master(cfg, [1, 2], errors=errors)
+    assert [p.page for p in master.pages] == [2]
+    assert errors and errors[0][0] == 1
+
+
+def test_master_drops_pages_the_input_no_longer_has(tmp_path):
+    cfg = make_cfg(tmp_path)
+    for p in (1, 2, 3):
+        write_norm(cfg, p, "क")
+    pipeline.build_master(cfg, [1, 2, 3], num_pages=3)
+    master = pipeline.build_master(cfg, [1, 2], num_pages=2)
+    assert [p.page for p in master.pages] == [1, 2]
+    assert set(master.norm_hashes) == {1, 2}
+
+
+def test_interrupted_stage_is_not_cached(tmp_path):
+    cfg = make_cfg(tmp_path)
+    counter = Counter()
+
+    def crash(job):
+        job.path("a.txt").write_text("half", encoding="utf-8")
+        raise KeyboardInterrupt  # not an Exception: the runner does not catch it, like a kill mid-write
+
+    stages = text_stages(counter)
+    run_once(cfg, stages, pages=[1])
+    with pytest.raises(KeyboardInterrupt):
+        run_once(cfg, [Stage("first", (), ("a.txt",), crash, lambda job: "changed")], pages=[1])
+    rec = Manifest.load(cfg.manifest_path).record(1, "first")
+    assert rec.status == "pending"  # a later run redoes it instead of trusting the half-written file
+    run_once(cfg, stages, pages=[1])
+    assert counter.calls.count(("first", 1)) == 2
+
+
+def test_failed_stage_keeps_what_it_spent(tmp_path):
+    cfg = make_cfg(tmp_path)
+
+    def billed_then_failed(job):
+        e = RuntimeError("model gave up")
+        e.cost_usd = 0.4
+        raise e
+
+    run_once(cfg, [Stage("first", (), ("a.txt",), billed_then_failed)], pages=[1])
+    m = Manifest.load(cfg.manifest_path)
+    assert m.record(1, "first").status == "failed"
+    assert m.total_cost() == 0 and m.total_spent() == pytest.approx(0.4)
+    run_once(cfg, text_stages(Counter()), pages=[1])  # the successful rerun adds to what was spent
+    assert Manifest.load(cfg.manifest_path).total_spent() == pytest.approx(0.9)
+
+
+def test_keep_stage_reuses_outputs_despite_changed_settings(tmp_path):
+    cfg = make_cfg(tmp_path)
+    counter = Counter()
+    run_once(cfg, text_stages(counter), shared={"doc": "v1"}, pages=[1])
+    kept = make_cfg(tmp_path, keep_stages=frozenset({"first"}))
+    run_once(kept, text_stages(counter), shared={"doc": "v2"}, pages=[1])
+    assert counter.calls.count(("first", 1)) == 1
+    run_once(cfg, text_stages(counter), shared={"doc": "v2"}, pages=[1])
+    assert counter.calls.count(("first", 1)) == 2
+
+
+def test_runner_reports_only_completed_pages(tmp_path):
+    cfg = make_cfg(tmp_path)
+    runner = run_once(cfg, text_stages(Counter(), fail_pages={2}))
+    assert sorted(runner.completed) == [1, 3]
+
+
+def test_validate_fingerprint_follows_image_content(tmp_path):
+    cfg = make_cfg(tmp_path)
+    job = PageJob(1, pipeline.page_dir(cfg.work_dir, 1), cfg)
+    job.page_dir.mkdir(parents=True)
+    job.path(pipeline.PRE_PNG).write_bytes(b"scan one")
+    a = pipeline._validate_fingerprint(job)
+    job.path(pipeline.PRE_PNG).write_bytes(b"scan two")
+    assert pipeline._validate_fingerprint(job) != a
+
+
+def test_normalize_stage_has_a_version_fingerprint():
+    stage = next(s for s in pipeline.default_stages("pdf") if s.name == "normalize")
+    from vedalipi.normalize import NORMALIZE_VERSION
+
+    assert NORMALIZE_VERSION in stage.fingerprint(None)
+
+
+def test_output_dir_lock_is_exclusive(tmp_path):
+    with pipeline.out_lock(tmp_path):
+        with pytest.raises(RuntimeError, match="another vedalipi process"):
+            with pipeline.out_lock(tmp_path):
+                pass
+    with pipeline.out_lock(tmp_path):  # released
+        pass
+
+
+def test_render_rejects_unknown_script_cleanly(tmp_path):
+    from vedalipi.cli import main
+
+    with pytest.raises(SystemExit):
+        main(["render", str(tmp_path), "--script", "klingon"])
+
+
+def test_corrections_can_fix_heading_level_and_alignment(tmp_path):
+    cfg = make_cfg(tmp_path)
+    write_norm(cfg, 1, "श्री")
+    master = pipeline.build_master(cfg, [1])
+    fixed = pipeline.apply_corrections(master, [Correction(page=1, block_id="b1", level=1, align="center")])
+    assert fixed.page(1).block("b1").level == 1 and fixed.page(1).block("b1").align == "center"
+
+
+def test_cross_read_adds_a_second_ocr_stage():
+    names = [s.name for s in pipeline.default_stages("pdf", cross_read=True)]
+    assert names == ["ingest", "preprocess", "ocr", "crossread", "normalize", "validate"]
+    assert "crossread" not in [s.name for s in pipeline.default_stages("pdf")]

@@ -72,7 +72,7 @@ def _render_line(text: str, script: str, a8f3: str | None) -> tuple[str, str]:
     mistaken for a lossy conversion.
     """
     raw = _convert(text, DEVA, script)
-    return raw, (raw.replace(A8F3, a8f3) if a8f3 else raw)
+    return raw, (raw.replace(A8F3, a8f3) if a8f3 is not None else raw)
 
 
 def transliterate_text(text: str, script: str, *, a8f3: str | None = None) -> str:
@@ -84,40 +84,58 @@ def transliterate_text(text: str, script: str, *, a8f3: str | None = None) -> st
     return out
 
 
+def _roundtrip_key(text: str) -> str:
+    # The one sanctioned equivalence: targets without an om sign write ॐ as ओं (ಓಂ, ఓం), which reads back as ओं.
+    return normalize_text(text).replace("ॐ", "ओं")
+
+
+def roundtrip_back(converted: str, script: str) -> str:
+    """`converted` read back into Devanagari."""
+    return _convert(converted, script, DEVA)
+
+
 def roundtrip_ok(devanagari: str, converted: str, script: str) -> bool:
-    """Convert `converted` back to Devanagari and compare with `devanagari` after normalize_text."""
-    back = _convert(converted, script, DEVA)
-    if normalize_text(devanagari) == normalize_text(back):
-        return True
-    # vidyut folds ॐ and its target forms (ಓಂ/ఓం) together, so ॐ and ओं compare equal in the target
-    # script even though they differ in Devanagari. Re-convert both and compare there.
-    return _convert(normalize_text(devanagari), DEVA, script) == _convert(normalize_text(back), DEVA, script)
+    """Convert `converted` back to Devanagari and compare it with `devanagari` directly (after normalize_text).
+
+    The comparison is in Devanagari, never after a second forward conversion: a character the forward
+    conversion drops would vanish from both sides of such a comparison and go unnoticed.
+    """
+    return _roundtrip_key(devanagari) == _roundtrip_key(roundtrip_back(converted, script))
 
 
-def _convert_line(text: str, script: str, a8f3: str | None) -> tuple[str, bool]:
-    """Return (converted line, round trip ok) for one Devanagari string."""
+def _convert_line(text: str, script: str, a8f3: str | None) -> tuple[str, bool, str]:
+    """Return (converted line, round trip ok, raw conversion) for one Devanagari string."""
     raw, out = _render_line(text, script, a8f3)
-    return out, roundtrip_ok(text, raw, script)
+    return out, roundtrip_ok(text, raw, script), raw
 
 
-def transliterate_master(master: Master, script: str, *, a8f3: str | None = None) -> Master:
+def transliterate_master(
+    master: Master, script: str, *, a8f3: str | None = None, diagnostics: list[dict] | None = None
+) -> Master:
     """Return a copy of master with every lang=="sa" line and table cell in `script`.
 
-    Other languages pass through unchanged. Blocks with any failed round trip get "roundtrip_fail".
+    Other languages pass through unchanged. Blocks with any failed round trip get "roundtrip_fail",
+    and each failing string is appended to `diagnostics` as {page, block, text, converted, back}.
     The input master is not modified.
     """
+    if script not in supported_scripts():
+        raise ValueError(f"unsupported script {script!r}; choose from {', '.join(supported_scripts())}")
     out = master.model_copy(deep=True)
     a8f3 = _a8f3_for(script, a8f3)
     for page in out.pages:
         for block in page.blocks:
+            fails: list[dict] = []
             if not block.is_sanskrit:
                 # An English/Tamil block can quote Sanskrit, e.g. "Acharya Vandhanam (आचार्य वन्दनम्)":
                 # only its Devanagari runs are converted, everything else passes through.
-                if _has_devanagari(block) and _transliterate_block(block, script, a8f3, runs_only=True):
-                    block.add_flag(FLAG_ROUNDTRIP_FAIL)
-                continue
-            if _transliterate_block(block, script, a8f3):
+                if _has_devanagari(block):
+                    _transliterate_block(block, script, a8f3, fails, runs_only=True)
+            else:
+                _transliterate_block(block, script, a8f3, fails)
+            if fails:
                 block.add_flag(FLAG_ROUNDTRIP_FAIL)
+                if diagnostics is not None:
+                    diagnostics.extend({"page": page.page, "block": block.id, **f} for f in fails)
     return out
 
 
@@ -130,37 +148,25 @@ def _has_devanagari(block: Block) -> bool:
     return any(_DEVA_RUN.search(t) for t in [*block.lines, *cells])
 
 
-def _convert_runs(text: str, script: str, a8f3: str | None) -> tuple[str, bool]:
-    """Convert only the Devanagari runs of a mixed-language string."""
-    ok_all = True
+def _convert_string(text: str, script: str, a8f3: str | None, fails: list[dict], *, runs_only: bool) -> str:
+    """Convert a whole Devanagari string, or only the Devanagari runs of a mixed-language one.
+
+    Each piece whose round trip fails is recorded in `fails`.
+    """
+    pieces = [(m.start(), m.end()) for m in _DEVA_RUN.finditer(text)] if runs_only else [(0, len(text))]
     parts, pos = [], 0
-    for m in _DEVA_RUN.finditer(text):
-        converted, ok = _convert_line(m.group(0), script, a8f3)
-        parts += [text[pos : m.start()], converted]
-        ok_all = ok_all and ok
-        pos = m.end()
+    for a, b in pieces:
+        converted, ok, raw = _convert_line(text[a:b], script, a8f3)
+        if not ok:
+            fails.append({"text": text[a:b], "converted": converted, "back": roundtrip_back(raw, script)})
+        parts += [text[pos:a], converted]
+        pos = b
     parts.append(text[pos:])
-    return "".join(parts), ok_all
+    return "".join(parts)
 
 
-def _transliterate_block(block: Block, script: str, a8f3: str | None, *, runs_only: bool = False) -> bool:
-    """Convert a block's lines and cells in place; return True if any round trip failed."""
-    convert = _convert_runs if runs_only else _convert_line
-    failed = False
-    lines = []
-    for line in block.lines:
-        text, ok = convert(line, script, a8f3)
-        lines.append(text)
-        failed = failed or not ok
-    block.lines = lines
+def _transliterate_block(block: Block, script: str, a8f3: str | None, fails: list[dict], *, runs_only: bool = False) -> None:
+    """Convert a block's lines and cells in place; failed round trips are appended to `fails`."""
+    block.lines = [_convert_string(line, script, a8f3, fails, runs_only=runs_only) for line in block.lines]
     if block.rows is not None:
-        rows = []
-        for row in block.rows:
-            cells = []
-            for cell in row:
-                text, ok = convert(cell, script, a8f3)
-                cells.append(text)
-                failed = failed or not ok
-            rows.append(cells)
-        block.rows = rows
-    return failed
+        block.rows = [[_convert_string(c, script, a8f3, fails, runs_only=runs_only) for c in row] for row in block.rows]

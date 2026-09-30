@@ -232,3 +232,72 @@ def test_textlayer_leaves_drawing_identical(tmp_path):
     with pymupdf.open(raw) as a, pymupdf.open(fixed) as b, pymupdf.open(out) as c:
         for pa, pb, pc in zip(a, b, c):
             assert pa.get_pixmap(dpi=72).samples == pb.get_pixmap(dpi=72).samples == pc.get_pixmap(dpi=72).samples
+
+
+def test_textlayer_keeps_identical_clusters_on_separate_lines(tmp_path):
+    """A cluster ending one line and the same cluster starting the next are two clusters, not a split piece."""
+    page = Page(page=1, blocks=[
+        Block(id="v", type="verse", lines=["अ॒ग्नि क्ष", "क्ष अ॒ग्नि", "क्ष॒ क्ष॒ क्ष॒"]),
+    ])
+    master = Master(title="t", source="t.pdf", pages=[page])
+    target = transliterate.transliterate_master(master, "kannada")
+    out = tmp_path / "rep.pdf"
+    render_pdf(master, target, out, script="kannada", work_dir=tmp_path / "work")
+    text = pdf_text(out)
+    assert text.count("ಕ್ಷ") == 5, text
+    assert "ಅ॒ಗ್ನಿ" in text and "ಅ॒ಅ॒" not in text
+
+
+def test_prose_keeps_printed_paragraphs_and_joins_only_wrapped_lines():
+    from vedalipi.render.document import prose_paragraphs
+
+    lines = [
+        "आचम्य पवित्रपाणिः शुद्धभूमौ कदळ्यादिदले प्रस्थद्वयमितं तण्डुलं निक्षिप्य,",
+        "कुम्भं निधाय प्रणवव्याहृतिभिरद्भिः पूरयित्वा कूर्चं आम्रपल्लवादिभिरलंकृत्य ।",
+        "ओं विष्वक्सेनाय नमः धूपं समर्पयामि",
+        "[पुण्याहे चतुरो ब्राह्मणान् तोषयिष्ये]",
+        "दक्षिणकरतलेन कुम्भं समालभ्य",
+    ]
+    assert prose_paragraphs(lines) == [lines[:2], [lines[2]], [lines[3]], [lines[4]]]
+
+
+def test_contents_split_by_ocr_is_rejoined_into_one_table():
+    from vedalipi.render.document import merge_contents
+
+    blocks = [
+        Block(id="l1", type="list_item", lines=["पुरुषसूक्तम्"]),
+        Block(id="l2", type="list_item", lines=["नारायणसूक्तम्"]),
+        Block(id="t1", type="table", lang="en", rows=[["i)", "Sri Ahobila Math", "ix"]]),
+        Block(id="t2", type="table", rows=[["6.", "ग्रह प्रीतिः", "10-11"]]),
+        Block(id="l3", type="list_item", lines=["शान्तिपञ्चकम्"]),
+        Block(id="p", type="prose", lines=["अथ"]),
+        Block(id="l4", type="list_item", lines=["अन्यत्"]),
+    ]
+    out = merge_contents(blocks)
+    assert [b.id for b in out] == ["t1", "p", "l4"]
+    assert out[0].rows == [["", "• पुरुषसूक्तम्", ""], ["", "• नारायणसूक्तम्", ""], ["i)", "Sri Ahobila Math", "ix"],
+                           ["6.", "ग्रह प्रीतिः", "10-11"], ["", "• शान्तिपञ्चकम्", ""]]
+    assert out[0].lang == "sa"
+    assert blocks[2].rows == [["i)", "Sri Ahobila Math", "ix"]]  # inputs untouched
+
+
+def test_table_layout_header_only_for_boxed_tables():
+    from vedalipi.render.document import table_layout
+
+    assert table_layout([["प्रार्थना", "प्रतिवचनम्"], ["अ", "आ"]])["header"] is True
+    assert table_layout([["1.", "स्वस्ति वाचनम्", "1-2"], ["2.", "अनुज्ञा", "3-5"]])["header"] is False
+
+
+def test_image_crops_never_share_a_filename(tmp_path):
+    work = tmp_path / "work"
+    make_scan(work / "pages" / "p0001" / "pre.png")
+    page = Page(page=1, blocks=[
+        Block(id="a/b", type="image", bbox=[0.1, 0.1, 0.4, 0.4]),
+        Block(id="a?b", type="image", bbox=[0.5, 0.5, 0.9, 0.9]),
+    ])
+    master = Master(title="t", source="t.pdf", pages=[page])
+    from vedalipi.render.document import build_document
+
+    doc = build_document(master, master, script="kannada", side_by_side=False, work_dir=work, build_dir=tmp_path / "b")
+    paths = [b["image"] for b in doc["pages"][0]["blocks"]]
+    assert len(set(paths)) == 2 and all((tmp_path / "b" / p).exists() for p in paths)

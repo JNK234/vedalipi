@@ -98,7 +98,16 @@
 // ------------------------------------------------------------ block renderers
 
 #let al(name) = if name == "center" { center } else if name == "right" { right } else { left }
-#let styled(f, body) = text(font: f.font, lang: f.lang, size: f.at("scale", default: 1.0) * 1em, body)
+// Latin text is scaled down to sit evenly with Indic text; Indic runs quoted inside it (a transliterated
+// "Acharya Vandhanam (ಆಚಾರ್ಯ ವನ್ದನಮ್)") are scaled back so they match the Indic body size.
+#let indic = regex("[\u{0900}-\u{0DFF}\u{1CD0}-\u{1CFF}\u{A8E0}-\u{A8FF}]+")
+#let styled(f, body) = {
+  let sc = f.at("scale", default: 1.0)
+  text(font: f.font, lang: f.lang, size: sc * 1em, if f.lang == "en" and sc != 1.0 {
+    show indic: it => text(size: 1em / sc, it)
+    body
+  } else { body })
+}
 #let join-lines(lines) = lines.map(l => [#l]).join(linebreak())
 
 #let blank(width) = box(width: width * 1em, baseline: 0pt, line(length: 100%, stroke: (paint: luma(60), thickness: 0.9pt, dash: "loosely-dotted")))
@@ -115,7 +124,9 @@
     // One paragraph per printed line; a line too long for the measure wraps with a hanging indent.
     styled(f, src.lines.map(l => par(hanging-indent: 2em, spacing: S.leading * 1em, [#l])).join())
   } else if b.type == "prose" {
-    styled(f, par(justify: true, src.lines.join(" ")))
+    // Printed paragraphs stay apart; only wrapped continuation lines are joined, and only those justified.
+    // Paragraphs of one block sit a plain line apart, as the printed lines did.
+    styled(f, src.paras.map(p => par(justify: p.len() > 1, spacing: S.leading * 1em, p.join(" "))).join())
   } else if b.type == "list_item" {
     styled(f, grid(columns: (1.6em, 1fr), column-gutter: 0.2em, [#src.marker], src.lines.join(" ")))
   } else if b.type == "fill_blank" {
@@ -123,12 +134,26 @@
   } else if b.type == "table" {
     let n = calc.max(1, ..src.rows.map(r => r.len()))
     let lay = b.table
+    let rule = 0.5pt + luma(90)
+    let hdr = lay.at("header", default: false)
+    // Every cell gets the same line box whatever its font, so baselines line up across a row.
+    set text(top-edge: 1.05em, bottom-edge: -0.5em)
     styled(f, table(
       columns: lay.widths.map(w => if w == "auto" { auto } else { 1fr }),
-      stroke: if lay.ruled { 0.5pt + luma(90) } else { none },
-      inset: if lay.ruled { (x: 0.55em, y: 0.5em) } else { (x: 0.4em, y: 0.3em) },
-      align: (x, _) => if lay.last_right and x == n - 1 { right + horizon } else { left + horizon },
-      ..src.rows.map(r => r.map(c => c.split("\n").map(x => [#x]).join(linebreak())) + range(n - r.len()).map(_ => [])).flatten(),
+      // A boxed table: outer border, column dividers and a rule under the header row, as printed.
+      stroke: if lay.ruled {
+        (x, y) => (
+          left: rule, right: rule,
+          top: if y == 0 or (hdr and y == 1) { rule } else { none },
+          bottom: if y == src.rows.len() - 1 { rule } else { none },
+        )
+      } else { none },
+      inset: if lay.ruled { (x: 0.55em, y: 0.45em) } else { (x: 0.4em, y: 0.3em) },
+      align: (x, y) => if hdr and y == 0 { center + top } else if lay.last_right and x == n - 1 { right + top } else { left + top },
+      ..src.rows.enumerate().map(((y, r)) => r.map(c => {
+        let cell = c.split("\n").map(x => [#x]).join(linebreak())
+        if hdr and y == 0 { strong(cell) } else { cell }
+      }) + range(n - r.len()).map(_ => [])).flatten(),
     ))
   } else if b.type == "foreign" {
     styled(f, join-lines(src.lines))
@@ -146,18 +171,18 @@
 #let render-block(b) = {
   if b.type == "image" { return render-image(b) }
   if b.type == "separator" { return align(center, block(above: 1em, below: 1em, line(length: 28%, stroke: 0.6pt + gray))) }
-  let a = if b.type == "heading" and b.align != "right" { center } else { al(b.align) }
+  let a = al(b.align)
   let space = if b.tight_above or b.tight_below {
     (above: if b.tight_above { 0.55em } else { S.spacing * 1em }, below: if b.tight_below { 0.55em } else { S.spacing * 1em })
   } else if b.type == "heading" { (above: 1.5em, below: 1.1em) } else if b.type == "table" { (above: 1.1em, below: 1.1em) } else { (:) }
-  let target = (font: b.font, lang: b.lang, scale: b.scale, lines: b.lines, rows: b.rows, segs: b.at("segs", default: ()), marker: b.at("marker", default: "•"))
+  let target = (font: b.font, lang: b.lang, scale: b.scale, lines: b.lines, rows: b.rows, segs: b.at("segs", default: ()), paras: b.at("paras", default: ()), marker: b.at("marker", default: "•"))
   // Short tables stay whole rather than stranding a header row at the foot of a page.
   let whole = b.type == "table" and b.rows.len() <= 10
   if b.orig == none {
     block(width: 100%, breakable: not whole, ..space, align(a, body-of(b, target)))
   } else {
     let o = b.orig
-    let orig = (font: o.font, lang: o.lang, scale: o.scale, lines: o.lines, rows: o.rows, segs: o.at("segs", default: ()), marker: o.at("marker", default: "•"))
+    let orig = (font: o.font, lang: o.lang, scale: o.scale, lines: o.lines, rows: o.rows, segs: o.at("segs", default: ()), paras: o.at("paras", default: ()), marker: o.at("marker", default: "•"))
     let two(x, y) = grid(columns: (1fr, 1fr), column-gutter: 1.6em, align(a, x), align(a, y))
     if b.type == "verse" and o.lines.len() == b.lines.len() {
       // Line-by-line pairing keeps each Devanagari line level with its transliteration.

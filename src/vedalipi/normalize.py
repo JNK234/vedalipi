@@ -7,6 +7,9 @@ import unicodedata
 
 from .schema import Page
 
+# Part of the normalize stage fingerprint: bump when normalize_text changes so cached norm.json is redone.
+NORMALIZE_VERSION = "1"
+
 _VIRAMA = "्"
 _NUKTA = "़"
 

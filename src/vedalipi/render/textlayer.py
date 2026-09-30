@@ -132,24 +132,71 @@ def _lit(codes: list[bytes]) -> bytes:
     return b"<" + b"".join(codes).hex().upper().encode() + b">"
 
 
+def _mul(m: tuple, n: tuple) -> tuple:
+    """Affine product m x n of PDF matrices (a, b, c, d, e, f): apply m, then n."""
+    a, b, c, d, e, f = m
+    A, B, C, D, E, F = n
+    return (a * A + b * C, a * B + b * D, c * A + d * C, c * B + d * D, e * A + f * C + E, e * B + f * D + F)
+
+
 class _Walker:
-    """Rewrites one content stream; `last` is the text most recently emitted to an extractor."""
+    """Rewrites one content stream; `last` is the text most recently emitted to an extractor.
+
+    A glyph run is a repeated piece of the previous cluster only when all of these hold: it starts a new
+    positioned run, it maps to the same multi-character cluster text, its first glyph differs from the
+    cluster's first glyph (a piece is another glyph of the cluster, not the cluster again), and it sits
+    on the same line, not left of the run that emitted the cluster (a cluster starting the next line lies
+    a line pitch lower and far to the left). Pieces are offset vertically by a fraction of an em at most.
+    """
 
     def __init__(self, fonts: dict[str, dict[int, str]]):
         self.fonts = fonts
         self.cmap: dict[int, str] = {}
+        self.size = 10.0
         self.last = ""
+        self.last_code: bytes = b""
+        self.last_x = 0.0  # device position of the run that emitted `last`
+        self.last_y = 0.0
         self.new_run = True  # a Tm/BT/cm since the last emission: the next glyph starts a new positioned run
         self.stack: list[bool] = []  # BDC nesting; True for /ActualText spans
+        self.ctm = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+        self.ctm_stack: list[tuple] = []
+        self.tm = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+        # An /ActualText span waiting for its first glyph: (index into out, operands, index of the text
+        # operand, text, whether it may be a repeat). Its code and position decide, and set `last`.
+        self.pending: tuple[int, list[tuple[str, bytes]], int, str, bool] | None = None
         self.changed = 0
 
-    def _is_repeat(self, text: str) -> bool:
-        return self.new_run and len(text) > 1 and text == self.last
+    def _pos(self) -> tuple[float, float]:
+        """Device-space position of the current text run's origin."""
+        m = _mul(self.tm, self.ctm)
+        return m[4], m[5]
 
-    def _emit(self, text: str) -> None:
+    def _is_repeat(self, text: str, code: bytes) -> bool:
+        if not (self.new_run and len(text) > 1 and text == self.last and code != self.last_code):
+            return False
+        x, y = self._pos()
+        return x >= self.last_x - 0.5 * self.size and abs(y - self.last_y) < self.size
+
+    def _emit(self, text: str, code: bytes) -> None:
         if text:
+            if self.new_run:
+                self.last_x, self.last_y = self._pos()
             self.last = text
+            self.last_code = code
             self.new_run = False
+
+    def _resolve_pending(self, first: bytes | None, out: list[bytes]) -> None:
+        """Decide a pending /ActualText span now that its first glyph is known."""
+        idx, operands, k, text, candidate = self.pending
+        self.pending = None
+        if candidate and first is not None and self._is_repeat(text, first):
+            operands = list(operands)
+            operands[k] = ("hex", b"<FEFF>")
+            out[idx] = b" ".join(r for _, r in operands) + b" BDC\n"
+            self.changed += 1
+        else:
+            self._emit(text, first or b"")
 
     def show(self, op: bytes, operands: list[tuple[str, bytes]]) -> bytes:
         """Handle Tj/TJ; returns replacement bytes for the operator with its operands."""
@@ -163,9 +210,9 @@ class _Walker:
                 continue
             for code in _glyphs(raw):
                 text = self.cmap.get(int.from_bytes(code, "big"), "")
-                repeat = not in_actual and self._is_repeat(text)
+                repeat = not in_actual and self._is_repeat(text, code)
                 if not in_actual and not repeat:
-                    self._emit(text)
+                    self._emit(text, code)
                 if pieces and pieces[-1][2] == repeat and not adj:
                     pieces[-1][1].append(code)
                 else:
@@ -186,6 +233,7 @@ class _Walker:
         toks = _tokenize(data)
         out: list[bytes] = []
         operands: list[tuple[str, bytes]] = []
+        nums = lambda: [float(r) for k, r in operands if k == "num"]  # noqa: E731
         for kind, raw in toks:
             if kind != "op":
                 operands.append((kind, raw))
@@ -195,8 +243,23 @@ class _Walker:
             if raw == b"Tf":
                 names = [r for k, r in operands if k == "name"]
                 self.cmap = self.fonts.get(names[-1][1:].decode(), {}) if names else {}
+                if nums():
+                    self.size = abs(nums()[-1]) or self.size
+            elif raw == b"q":
+                self.ctm_stack.append(self.ctm)
+            elif raw == b"Q":
+                self.ctm = self.ctm_stack.pop() if self.ctm_stack else self.ctm
             elif raw in (b"Tm", b"BT", b"cm", b"Td", b"TD", b"T*"):
                 self.new_run = True
+                n = nums()
+                if raw == b"cm" and len(n) == 6:
+                    self.ctm = _mul(tuple(n), self.ctm)
+                elif raw == b"Tm" and len(n) == 6:
+                    self.tm = tuple(n)
+                elif raw == b"BT":
+                    self.tm = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+                elif raw in (b"Td", b"TD") and len(n) == 2:
+                    self.tm = _mul((1.0, 0.0, 0.0, 1.0, n[0], n[1]), self.tm)
             elif raw == b"BDC":
                 body = b" ".join(r for _, r in operands)
                 actual = b"/ActualText" in body
@@ -205,16 +268,19 @@ class _Walker:
                     idx = [i for i, (_, r) in enumerate(operands) if r == b"/ActualText"]
                     val = operands[idx[0] + 1] if idx and idx[0] + 1 < len(operands) else None
                     text = _hex_text(val[1]) if val and val[0] == "hex" else ""
-                    if self._is_repeat(text):
-                        operands[idx[0] + 1] = ("hex", b"<FEFF>")
-                        repl = b" ".join(r for _, r in operands) + b" BDC\n"
-                        self.changed += 1
-                    else:
-                        self._emit(text)
+                    # Maybe a repeated piece: decided at the span's first glyph (its code and position).
+                    candidate = self.new_run and len(text) > 1 and text == self.last
+                    self.pending = (len(out), list(operands), idx[0] + 1 if idx else 0, text, candidate)
             elif raw == b"EMC":
+                if self.pending is not None:
+                    self._resolve_pending(None, out)
                 if self.stack:
                     self.stack.pop()
             elif raw in (b"Tj", b"TJ", b"'", b'"'):
+                if self.pending is not None:
+                    strs = [r for k, r in operands if k in ("str", "hex")]
+                    codes = _glyphs(strs[0]) if strs else []
+                    self._resolve_pending(codes[0] if codes else None, out)
                 if raw in (b"Tj", b"TJ"):
                     repl = self.show(raw, operands)
             out.append(repl or orig)

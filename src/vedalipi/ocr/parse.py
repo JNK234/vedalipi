@@ -12,11 +12,36 @@ from ..schema import FLAG_LOW_CONFIDENCE, Block, BlockType
 BLOCK_TYPES = set(typing.get_args(BlockType))
 ALIGNS = {"left", "center", "right"}
 _FENCE = re.compile(r"^```[a-zA-Z]*\s*|\s*```\s*$")
-_TRAILING_COMMA = re.compile(r",\s*([}\]])")
+
+
+def strip_trailing_commas(text: str) -> str:
+    """Remove commas that directly precede a closing } or ], but only outside JSON strings."""
+    out: list[str] = []
+    in_str = escaped = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+        elif ch == ",":
+            rest = text[i + 1 :].lstrip()
+            if rest[:1] in ("}", "]"):
+                continue
+        out.append(ch)
+    return "".join(out)
 
 
 class OcrParseError(ValueError):
-    """The model's answer held no usable JSON block list."""
+    """The model's answer held no usable JSON block list. `cost_usd`: what the unusable answers cost."""
+
+    def __init__(self, message: str, cost_usd: float = 0.0) -> None:
+        super().__init__(message)
+        self.cost_usd = cost_usd
 
 
 def extract_json(raw: str) -> object:
@@ -33,8 +58,8 @@ def extract_json(raw: str) -> object:
     decoder = json.JSONDecoder(strict=False)
     err: Exception | None = None
     # Unmodified text first (the decoder stops after the first complete value, so trailing junk is fine);
-    # the trailing-comma repair can touch string contents, so it is only a last resort.
-    for attempt in (candidate, text[start:], _TRAILING_COMMA.sub(r"\1", candidate)):
+    # the trailing-comma repair is a last resort.
+    for attempt in (candidate, text[start:], strip_trailing_commas(candidate)):
         try:
             return decoder.raw_decode(attempt)[0]
         except json.JSONDecodeError as e:
@@ -124,10 +149,9 @@ def parse_blocks(raw: str, id_prefix: str = "b") -> list[Block]:
         data = data.get("blocks")
     if not isinstance(data, list):
         raise OcrParseError('answer JSON has no "blocks" list')
-    blocks = []
-    for item in data:
-        if isinstance(item, dict):
-            blocks.append(coerce_block(item, f"{id_prefix}{len(blocks) + 1}"))
-    if data and not blocks:
-        raise OcrParseError("no block objects in blocks list")
-    return blocks
+    # A non-object entry is content the model mangled: reject the answer so the band is read again,
+    # rather than caching a page with silently missing text.
+    bad = [item for item in data if not isinstance(item, dict)]
+    if bad:
+        raise OcrParseError(f"{len(bad)} blocks list entries are not objects, e.g. {str(bad[0])[:120]!r}")
+    return [coerce_block(item, f"{id_prefix}{i}") for i, item in enumerate(data, 1)]

@@ -32,6 +32,11 @@ FLAG_TRUNCATED_RIGHT = "truncated_right"
 FLAG_LOW_CONFIDENCE = "low_confidence"
 FLAG_SVARA_COUNT_MISMATCH = "svara_count_mismatch"
 FLAG_ROUNDTRIP_FAIL = "roundtrip_fail"
+FLAG_INVALID_SEQUENCE = "invalid_sequence"
+FLAG_AMBIGUOUS_SVARA_SPAN = "ambiguous_svara_span"  # set by the OCR model: one printed mark spans two aksharas
+FLAG_READER_DISAGREEMENT = "reader_disagreement"  # an independent second OCR read of the line differs
+# Flags owned by validate.py: replaced wholesale whenever a page is re-validated.
+VALIDATOR_FLAGS = (FLAG_SVARA_COUNT_MISMATCH, FLAG_INVALID_SEQUENCE, FLAG_READER_DISAGREEMENT)
 
 StageStatus = Literal["pending", "done", "failed"]
 
@@ -153,7 +158,8 @@ class FlagReport(_JsonModel):
 class StageRecord(_JsonModel):
     status: StageStatus = "pending"
     input_hash: str = ""
-    cost_usd: float = 0.0
+    cost_usd: float = 0.0  # cost of the run that produced the cached output
+    spent_usd: float = 0.0  # everything this page/stage has ever cost, failed and superseded runs included
     error: str | None = None
     updated_at: str = ""
 
@@ -175,7 +181,12 @@ class Manifest(_JsonModel):
         self.pages.setdefault(page, {})[stage] = rec
 
     def total_cost(self) -> float:
+        """Cost of the outputs currently cached."""
         return sum(r.cost_usd for stages in self.pages.values() for r in stages.values())
+
+    def total_spent(self) -> float:
+        """Everything spent, including failed attempts and outputs later redone."""
+        return sum(max(r.spent_usd, r.cost_usd) for stages in self.pages.values() for r in stages.values())
 
 
 class Master(_JsonModel):
@@ -209,13 +220,16 @@ class Master(_JsonModel):
 
 
 class Correction(_JsonModel):
-    """One hand edit to master.json: replace lines and/or rows of a block, or set its flags."""
+    """One hand edit to master.json: replace lines and/or rows of a block, set its flags, or fix its
+    heading level or alignment. Fields left out stay as they are."""
 
     page: int
     block_id: str
     lines: list[str] | None = None
     rows: list[list[str]] | None = None
     flags: list[str] | None = None
+    level: int | None = None
+    align: Align | None = None
 
 
 def load_json(path: Path) -> object:

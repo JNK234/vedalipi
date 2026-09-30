@@ -125,3 +125,28 @@ def test_devanagari_runs_in_english_block_are_converted():
     out = transliterate.transliterate_master(master, "kannada")
     assert out.pages[0].blocks[0].rows == [["viii)", "Acharya Vandhanam (ಆಚಾರ್ಯ ವನ್ದನಮ್)", "xxv"]]
     assert out.pages[0].blocks[0].flags == []
+
+
+def test_roundtrip_catches_a_character_the_target_drops():
+    # U+0929 (ऩ) has no Telugu counterpart: it must not pass just because both sides lose it.
+    converted = transliterate.transliterate_text("ऩ", "telugu")
+    assert not transliterate.roundtrip_ok("ऩ", converted, "telugu")
+
+
+def test_om_sign_and_o_anusvara_are_the_only_folded_pair():
+    assert transliterate.roundtrip_ok("ॐ", transliterate.transliterate_text("ॐ", "kannada"), "kannada")
+
+
+def test_explicit_empty_a8f3_strips_the_sign():
+    assert transliterate.transliterate_text("अꣳ", "kannada", a8f3="") == "ಅ"
+    assert transliterate.transliterate_text("अꣳ", "kannada") == "ಅಗ್ಂ"
+
+
+def test_diagnostics_record_failed_lines_and_unknown_script_is_rejected():
+    master = Master(pages=[Page(page=1, blocks=[Block(id="b1", type="verse", lines=["ऩ क", "क"])])])
+    diags: list = []
+    out = transliterate.transliterate_master(master, "telugu", diagnostics=diags)
+    assert "roundtrip_fail" in out.page(1).block("b1").flags
+    assert [(d["page"], d["block"], d["text"]) for d in diags] == [(1, "b1", "ऩ क")]
+    with pytest.raises(ValueError, match="unsupported script"):
+        transliterate.transliterate_master(Master(), "klingon")

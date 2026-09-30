@@ -31,7 +31,9 @@ def _imwrite_gray(dst: Path, im: np.ndarray) -> None:
     ok, buf = cv2.imencode(".png", im)
     if not ok:
         raise ValueError(f"could not encode PNG for {dst}")
-    buf.tofile(dst)
+    tmp = dst.with_name(f".{dst.name}.tmp")
+    buf.tofile(tmp)
+    tmp.replace(dst)  # atomic: a crash never leaves a half-written pre.png
 
 
 def _flatten_illumination(gray: np.ndarray) -> np.ndarray:
