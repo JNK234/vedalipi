@@ -183,12 +183,15 @@ class Master(_JsonModel):
 
     norm_hashes maps page -> hash of the norm.json it was built from, so a rebuild only
     replaces pages whose OCR actually changed and hand corrections survive re-runs.
+    flag_hashes does the same for flags.json: a re-validated page gets fresh validator flags
+    while its (possibly corrected) text is kept.
     """
 
     title: str = ""
     source: str = ""
     pages: list[Page] = Field(default_factory=list)
     norm_hashes: dict[int, str] = Field(default_factory=dict)
+    flag_hashes: dict[int, str] = Field(default_factory=dict)
 
     def page(self, number: int) -> Page:
         for p in self.pages:

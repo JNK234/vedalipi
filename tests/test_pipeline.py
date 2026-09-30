@@ -210,3 +210,21 @@ def test_cli_apply_corrections(tmp_path):
     corr.write_text(json.dumps([{"page": 1, "block_id": "b1", "lines": ["य॒ज्ञः"]}]), encoding="utf-8")
     assert main(["apply-corrections", str(cfg.out_dir), str(corr)]) == 0
     assert Master.load(cfg.master_path).page(1).block("b1").lines == ["य॒ज्ञः"]
+
+
+def test_build_master_refreshes_flags_but_keeps_corrected_text(tmp_path):
+    from vedalipi.pipeline import RunConfig, build_master, page_dir
+    from vedalipi.schema import Block, FlagReport, Page
+
+    cfg = RunConfig(input_path=tmp_path / "in.pdf", out_dir=tmp_path / "out")
+    d = page_dir(cfg.work_dir, 1)
+    d.mkdir(parents=True)
+    Page(page=1, blocks=[Block(id="b1", type="verse", lines=["क"])]).save(d / "norm.json")
+    FlagReport(page=1, block_flags={"b1": ["svara_count_mismatch"]}).save(d / "flags.json")
+    master = build_master(cfg, [1])
+    master.page(1).blocks[0].lines = ["ख"]  # a hand correction
+    master.save(cfg.master_path)
+    FlagReport(page=1).save(d / "flags.json")  # re-validated: clean
+    master = build_master(cfg, [1])
+    assert master.page(1).blocks[0].lines == ["ख"]
+    assert master.page(1).blocks[0].flags == []

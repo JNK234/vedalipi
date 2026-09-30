@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .schema import Correction, FlagReport, Manifest, Master, Page, StageRecord
+from .schema import FLAG_SVARA_COUNT_MISMATCH, Correction, FlagReport, Manifest, Master, Page, StageRecord
 
 SOURCE_PNG = "source.png"
 PRE_PNG = "pre.png"
@@ -254,12 +254,19 @@ def _validate(job: PageJob) -> None:
     report.save(job.path(FLAGS_JSON))
 
 
+def _validate_fingerprint(job: PageJob) -> str:
+    from .validate import VALIDATE_VERSION
+
+    # The page image is read too, so its presence and the checker version both count.
+    return f"v{VALIDATE_VERSION}:image={job.path(PRE_PNG).exists()}"
+
+
 def default_stages(input_kind: str) -> list[Stage]:
     """Stage chain for an input kind: image inputs go through OCR, text inputs start at ocr.json."""
     doc = lambda job: job.shared["input_hash"] + f":{job.page}"  # noqa: E731
     tail = [
         Stage("normalize", (OCR_JSON,), (NORM_JSON,), _normalize),
-        Stage("validate", (NORM_JSON,), (FLAGS_JSON,), _validate),
+        Stage("validate", (NORM_JSON,), (FLAGS_JSON,), _validate, _validate_fingerprint),
     ]
     if input_kind in ("text", "json"):
         return [Stage("ingest", (), (OCR_JSON,), _ingest_text, doc), *tail]
@@ -287,13 +294,22 @@ def build_master(cfg: RunConfig, pages: Iterable[int], *, title: str = "") -> Ma
         norm, flags = d / NORM_JSON, d / FLAGS_JSON
         if not (norm.exists() and flags.exists()):
             continue
-        h = sha256_file(norm)
+        h, fh = sha256_file(norm), sha256_file(flags)
         if master.norm_hashes.get(p) == h and any(pg.page == p for pg in master.pages):
+            if master.flag_hashes.get(p) != fh:
+                # Same text, new validation: swap the validator's flags, keep everything else.
+                page = master.page(p)
+                for b in page.blocks:
+                    if FLAG_SVARA_COUNT_MISMATCH in b.flags:
+                        b.flags.remove(FLAG_SVARA_COUNT_MISMATCH)
+                master.upsert_page(FlagReport.load(flags).apply_to(page))
+                master.flag_hashes[p] = fh
             continue
         if p in master.norm_hashes:
             print(f"[p{p:04d}] OCR changed; master page replaced (earlier corrections for it are dropped)", file=sys.stderr)
         master.upsert_page(FlagReport.load(flags).apply_to(Page.load(norm)))
         master.norm_hashes[p] = h
+        master.flag_hashes[p] = fh
     master.save(cfg.master_path)
     return master
 
