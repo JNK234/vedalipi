@@ -1,0 +1,219 @@
+# ABOUTME: Data contract for vedalipi: page/block JSON, per-page flag reports, the run manifest and the Devanagari master.
+# ABOUTME: Pydantic models with atomic JSON load/save helpers; every stage reads and writes these shapes on disk.
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Literal, TypeVar
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+BlockType = Literal[
+    "running_header",
+    "heading",
+    "verse",
+    "prose",
+    "list_item",
+    "table",
+    "fill_blank",
+    "page_number",
+    "image",
+    "foreign",
+    "separator",
+]
+Align = Literal["left", "center", "right"]
+
+# Flags known to the pipeline. Blocks may carry other strings; these are the ones stages emit.
+FLAG_TRUNCATED_RIGHT = "truncated_right"
+FLAG_LOW_CONFIDENCE = "low_confidence"
+FLAG_SVARA_COUNT_MISMATCH = "svara_count_mismatch"
+FLAG_ROUNDTRIP_FAIL = "roundtrip_fail"
+
+StageStatus = Literal["pending", "done", "failed"]
+
+M = TypeVar("M", bound=BaseModel)
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    """Write text to path via a temp file + rename so readers never see a partial file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+class _JsonModel(BaseModel):
+    """Base with load/save helpers. Unknown keys are rejected so contract drift is caught early."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    @classmethod
+    def load(cls: type[M], path: Path) -> M:
+        return cls.model_validate_json(Path(path).read_text(encoding="utf-8"))
+
+    def save(self, path: Path) -> None:
+        atomic_write_text(Path(path), self.model_dump_json(indent=2) + "\n")
+
+    def to_json(self) -> str:
+        return self.model_dump_json(indent=2)
+
+
+class Block(_JsonModel):
+    """One layout unit on a page. Only lang == "sa" text is transliterated."""
+
+    id: str
+    type: BlockType
+    lang: str = "sa"
+    lines: list[str] = Field(default_factory=list)
+    rows: list[list[str]] | None = None
+    level: int | None = None
+    align: Align = "left"
+    bbox: list[float] | None = None
+    flags: list[str] = Field(default_factory=list)
+
+    @field_validator("bbox")
+    @classmethod
+    def _check_bbox(cls, v: list[float] | None) -> list[float] | None:
+        if v is None:
+            return v
+        if len(v) != 4:
+            raise ValueError("bbox must be [x0, y0, x1, y1]")
+        x0, y0, x1, y1 = v
+        if not all(0.0 <= c <= 1.0 for c in v) or x0 > x1 or y0 > y1:
+            raise ValueError(f"bbox must be normalized 0-1 with x0<=x1, y0<=y1: {v}")
+        return v
+
+    @model_validator(mode="after")
+    def _check_shape(self) -> Block:
+        if self.type == "table" and self.rows is None:
+            raise ValueError(f"table block {self.id} needs rows")
+        if self.type != "table" and self.rows is not None:
+            raise ValueError(f"only table blocks may have rows ({self.id} is {self.type})")
+        if self.type == "image" and self.bbox is None:
+            raise ValueError(f"image block {self.id} needs a bbox")
+        return self
+
+    @property
+    def is_sanskrit(self) -> bool:
+        return self.lang == "sa"
+
+    def add_flag(self, flag: str) -> None:
+        if flag not in self.flags:
+            self.flags.append(flag)
+
+
+class Page(_JsonModel):
+    """One source page: the unit written to ocr.json and norm.json."""
+
+    page: int
+    source_image: str = ""
+    blocks: list[Block] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _unique_ids(self) -> Page:
+        ids = [b.id for b in self.blocks]
+        dupes = {i for i in ids if ids.count(i) > 1}
+        if dupes:
+            raise ValueError(f"page {self.page}: duplicate block ids {sorted(dupes)}")
+        return self
+
+    def block(self, block_id: str) -> Block:
+        for b in self.blocks:
+            if b.id == block_id:
+                return b
+        raise KeyError(f"page {self.page}: no block {block_id!r}")
+
+
+class FlagReport(_JsonModel):
+    """validate.py output (flags.json): flags per block id plus free-form notes for the report."""
+
+    page: int
+    block_flags: dict[str, list[str]] = Field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
+
+    def apply_to(self, page: Page) -> Page:
+        """Return a copy of page with these flags merged into its blocks."""
+        out = page.model_copy(deep=True)
+        for b in out.blocks:
+            for f in self.block_flags.get(b.id, []):
+                b.add_flag(f)
+        return out
+
+
+class StageRecord(_JsonModel):
+    status: StageStatus = "pending"
+    input_hash: str = ""
+    cost_usd: float = 0.0
+    error: str | None = None
+    updated_at: str = ""
+
+
+class Manifest(_JsonModel):
+    """work/manifest.json: input identity and per-page, per-stage status."""
+
+    input_path: str
+    input_hash: str
+    input_kind: str
+    num_pages: int
+    pages: dict[int, dict[str, StageRecord]] = Field(default_factory=dict)
+
+    def record(self, page: int, stage: str) -> StageRecord | None:
+        return self.pages.get(page, {}).get(stage)
+
+    def set_record(self, page: int, stage: str, rec: StageRecord) -> None:
+        rec.updated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        self.pages.setdefault(page, {})[stage] = rec
+
+    def total_cost(self) -> float:
+        return sum(r.cost_usd for stages in self.pages.values() for r in stages.values())
+
+
+class Master(_JsonModel):
+    """<out>/master.json: the Devanagari source of truth for every rendered script.
+
+    norm_hashes maps page -> hash of the norm.json it was built from, so a rebuild only
+    replaces pages whose OCR actually changed and hand corrections survive re-runs.
+    """
+
+    title: str = ""
+    source: str = ""
+    pages: list[Page] = Field(default_factory=list)
+    norm_hashes: dict[int, str] = Field(default_factory=dict)
+
+    def page(self, number: int) -> Page:
+        for p in self.pages:
+            if p.page == number:
+                return p
+        raise KeyError(f"no page {number} in master")
+
+    def upsert_page(self, page: Page) -> None:
+        for i, p in enumerate(self.pages):
+            if p.page == page.page:
+                self.pages[i] = page
+                return
+        self.pages.append(page)
+        self.pages.sort(key=lambda p: p.page)
+
+
+class Correction(_JsonModel):
+    """One hand edit to master.json: replace lines and/or rows of a block, or set its flags."""
+
+    page: int
+    block_id: str
+    lines: list[str] | None = None
+    rows: list[list[str]] | None = None
+    flags: list[str] | None = None
+
+
+def load_json(path: Path) -> object:
+    return json.loads(Path(path).read_text(encoding="utf-8"))

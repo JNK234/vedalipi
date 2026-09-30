@@ -1,0 +1,36 @@
+[project]
+name = "vedalipi"
+version = "0.1.0"
+description = "Transliterate scanned Sanskrit books into other Indic scripts as clean PDFs"
+readme = "README.md"
+authors = [
+    { name = "JNK234", email = "jwalapuramnarasimha@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=1.10.0",
+    "google-genai>=2.25.0",
+    "indic-transliteration>=2.3.82",
+    "numpy>=2.5.3",
+    "opencv-python-headless>=5.0.0.93",
+    "pillow>=12.3.0",
+    "pydantic>=2.13.5",
+    "pymupdf>=1.28.2",
+    "typst>=0.15.0",
+    "vidyut>=0.4.0",
+]
+
+[project.scripts]
+vedalipi = "vedalipi.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.10,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
