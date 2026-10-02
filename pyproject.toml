@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=1.10.0",
+    "fonttools>=4.66.1",
     "google-genai>=2.25.0",
     "indic-transliteration>=2.3.82",
     "numpy>=2.5.3",

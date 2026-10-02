@@ -9,7 +9,7 @@ uv sync                 # Python 3.12; installs everything, including the Typst 
 uv run vedalipi --help
 ```
 
-The fonts are vendored in `fonts/` (Noto Serif Kannada, Noto Sans Telugu, Noto Serif Devanagari, Noto Sans Tamil, Noto Serif). Rendering never uses system fonts.
+The fonts are vendored in `fonts/` (Noto Serif Kannada, Noto Sans Telugu, Noto Serif Devanagari, Noto Sans Tamil, Noto Serif). Rendering never uses system fonts. At render time the Kannada, Telugu and Devanagari fonts are copied (OFL allows modified versions) into a user cache as "Vedalipi" families whose svara marks are heavier and set clear of the letter, so they read easily at book size; shaping is unchanged. The page follows prapatti.com's stotra PDFs: US Letter, 1.1in side margins, 16.74pt body, 1.42 em line pitch for plain verse and about 2 em for svara-marked text.
 
 The default OCR backend runs the local `claude` CLI on your Claude subscription. Log in to Claude Code once; no API key is needed.
 

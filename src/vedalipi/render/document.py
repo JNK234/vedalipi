@@ -9,24 +9,31 @@ from pathlib import Path
 
 from ..schema import Block, Master, Page
 from .fonts import font_chain, lang_font, script_font
+from .svarafont import derived_family, has_derived
 
 # Runs of dots, ellipses or underscores that stand for a blank to fill in ("........ नक्षत्रे").
 BLANK_RE = re.compile(r"(?:\.{2,}|…+|_{3,})(?:[ \t]*(?:\.{2,}|…+|_{3,}))*")
 # A list marker the source already printed: digits in any Indic script, letters, or a bullet sign.
 MARKER_RE = re.compile(r"^\s*((?:[0-9०-९೦-೯౦-౯௦-௯]+|[a-zA-Z]|[ivxIVX]+)[.)]|[•●○◦▪\-–—*])\s+")
 
-# Typographic defaults; paper switches to A4 for side-by-side so two columns have room.
+# Typographic defaults, after prapatti.com's XeTeX stotra PDFs: US Letter, 1.1in side margins, 16.74pt body,
+# baselines 1.42 em apart for plain verse and 1.81 em for svara-marked (Vedic) text, ~11pt extra between verses.
 STYLE = {
-    "paper": "a4",  # Vedic lines are long; A4 keeps each printed line on one output line
-    "size": 12.5,  # pt
-    "leading": 0.25,  # em gap between ascender/descender boxes; line pitch comes to ~1.9 em
-    "spacing": 1.1,  # em between paragraphs/blocks
-    "margin_inside": 18,  # mm
-    "margin_outside": 14,
-    "margin_top": 22,
-    "margin_bottom": 20,
+    "paper": "us-letter",
+    "size": 16.74,  # pt
+    "line_box": [1.0, 0.42],  # em above / below the baseline that every line box spans (pitch 1.42 em)
+    "leading": 0.0,  # em added between line boxes in plain text: pitch 1.42 em
+    "leading_vedic": 0.55,  # em added for svara-marked text: pitch ~1.97 em, room for marks above and below
+    "verse_gap": 0.68,  # em of extra space between blocks (11.35pt at 16.74pt)
+    "margin_left": 79.2,  # pt
+    "margin_right": 79.2,
+    "margin_top": 80,
+    "margin_bottom": 76,
 }
-STYLE_SIDE_BY_SIDE = {**STYLE, "paper": "a4", "size": 10.5, "margin_inside": 16, "margin_outside": 12}
+STYLE_SIDE_BY_SIDE = {**STYLE, "size": 11.5, "margin_left": 54, "margin_right": 54}
+
+# Vedic accents and their stand-ins: a block carrying any of them gets the wider Vedic line pitch.
+SVARA_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3]")
 
 BODY_EXCLUDED = ("running_header", "page_number")
 
@@ -187,7 +194,13 @@ def crop_image(src: Path, bbox: list[float], dest: Path) -> tuple[int, int]:
 
 def _font(block: Block, script: str) -> dict:
     sf = script_font(script) if block.is_sanskrit else lang_font(block.lang)
-    return {"font": font_chain(sf.family), "lang": sf.lang, "scale": sf.scale}
+    return {"font": family_chain(sf.family), "lang": sf.lang, "scale": sf.scale}
+
+
+def family_chain(family: str) -> list[str]:
+    """Font fallback list for a family, led by its svara-emphasised copy when one is derived (see svarafont)."""
+    chain = font_chain(family)
+    return [derived_family(family), *chain] if has_derived(family) else chain
 
 
 def _block_data(
@@ -198,6 +211,7 @@ def _block_data(
     d["tight_above"] = d["tight_below"] = False
     d["lines"] = block.lines
     d["rows"] = block.rows or []
+    d["vedic"] = any(SVARA_RE.search(t) for t in [*block.lines, *(c for r in d["rows"] for c in r)])
     if block.type == "table":
         d["table"] = table_layout(d["rows"])
     # The Devanagari original is shown only for Sanskrit text; foreign text is identical in both.
@@ -279,7 +293,7 @@ def build_document(
         "title": target.title or master.title or "",
         "script": script,
         "side_by_side": side_by_side,
-        "main": {"font": font_chain(main.family), "lang": main.lang},
+        "main": {"font": family_chain(main.family), "lang": main.lang},
         "latin": {"font": font_chain("Noto Serif"), "lang": "en"},
         "style": STYLE_SIDE_BY_SIDE if side_by_side else STYLE,
         "attachment": "master.json",

@@ -11,7 +11,7 @@ import pytest
 from PIL import Image, ImageDraw
 
 from vedalipi import transliterate
-from vedalipi.render import FONTS_DIR, build_dir_for, render_pdf
+from vedalipi.render import FONTS_DIR, build_dir_for, font_dirs, render_pdf
 from vedalipi.render.document import blank_segments, split_marker
 from vedalipi.render.fonts import SCRIPTS, font_chain
 from vedalipi.schema import Block, Master, Page
@@ -130,8 +130,9 @@ def test_only_vendored_fonts_used(kannada_pdf):
     with pymupdf.open(kannada_pdf) as doc:
         fonts = {f[3].split("+")[-1] for page in doc for f in page.get_fonts()}
     assert fonts, "no fonts found"
-    assert all(f.startswith("Noto") for f in fonts), fonts
-    assert any("Kannada" in f for f in fonts)
+    # Vendored Noto fonts, or the svara-emphasised Vedalipi copies derived from them.
+    assert all(f.startswith(("Noto", "Vedalipi")) for f in fonts), fonts
+    assert any(f.startswith("VedalipiSerifKannada") for f in fonts), fonts
 
 
 def test_image_crop_embedded(kannada_pdf):
@@ -189,6 +190,59 @@ def test_harfbuzz_marks_attach(script):
         assert font.get_nominal_glyph(ord(ch)) is not None, (script, hex(ord(ch)))
 
 
+@pytest.mark.parametrize("script", ["kannada", "telugu", "devanagari"])
+def test_derived_svara_font_shapes_like_the_original(script):
+    """The Vedalipi copy re-cuts only svara outlines: same glyphs and positions as Noto, no dotted circles,
+    and heavier marks (thicker anudatta bar, wider udatta tick)."""
+    hb = pytest.importorskip("uharfbuzz")
+    from fontTools.pens.boundsPen import BoundsPen
+    from fontTools.ttLib import TTFont
+
+    text = MARK_TEST if script == "devanagari" else transliterate.transliterate_text(MARK_TEST, script)
+    stem = SCRIPTS[script].family.replace(" ", "") + "-Regular.ttf"
+    orig_path = FONTS_DIR / stem
+    derived_path = Path(font_dirs()[1]) / stem.replace("Noto", "Vedalipi", 1)
+
+    def shape(path):
+        font = hb.Font(hb.Face(hb.Blob.from_file_path(str(path))))
+        buf = hb.Buffer()
+        buf.add_str(text)
+        buf.guess_segment_properties()
+        hb.shape(font, buf, {})
+        return font, [(g.codepoint, g.cluster) for g in buf.glyph_infos], [(p.x_offset, p.y_offset, p.x_advance) for p in buf.glyph_positions]
+
+    font, glyphs, pos = shape(derived_path)
+    assert (glyphs, pos) == shape(orig_path)[1:]
+    dotted = font.get_nominal_glyph(0x25CC)
+    assert 0 not in [g for g, _ in glyphs] and (dotted is None or dotted not in [g for g, _ in glyphs])
+
+    def bounds(path, cp):
+        f = TTFont(path)
+        gs = f.getGlyphSet()
+        pen = BoundsPen(gs)
+        gs[f.getBestCmap()[cp]].draw(pen)
+        return pen.bounds
+
+    ox0, oy0, ox1, oy1 = bounds(orig_path, 0x0952)
+    dx0, dy0, dx1, dy1 = bounds(derived_path, 0x0952)
+    assert dy1 - dy0 > oy1 - oy0 and dy1 < oy1  # thicker and lower
+    ux0, _, ux1, _ = bounds(orig_path, 0x0951)
+    vx0, _, vx1, _ = bounds(derived_path, 0x0951)
+    assert vx1 - vx0 > ux1 - ux0  # wider tick
+    assert TTFont(derived_path)["name"].getDebugName(1).startswith("Vedalipi")
+
+
+def test_vedic_blocks_get_wider_line_pitch():
+    from vedalipi.render.document import build_document
+
+    master = fixture_master()
+    doc = build_document(master, master, script="kannada", side_by_side=False, work_dir=Path("/nonexistent"), build_dir=Path("/tmp"))
+    by_id = {b["id"]: b for p in doc["pages"] for b in p["blocks"]}
+    assert by_id["v1"]["vedic"] and by_id["tb"]["vedic"]
+    assert not by_id["p1"]["vedic"] and not by_id["l1"]["vedic"]
+    assert doc["main"]["font"][:2] == ["Vedalipi Serif Kannada", "Noto Serif Kannada"]
+
+
 def test_font_chain_starts_with_primary():
     assert font_chain("Noto Serif Kannada")[0] == "Noto Serif Kannada"
     assert len(set(font_chain("Noto Serif Kannada"))) == len(font_chain("Noto Serif Kannada"))
@@ -224,7 +278,7 @@ def test_textlayer_leaves_drawing_identical(tmp_path):
     import typst
 
     build = build_dir_for(tmp_path / "work", "kannada", False)
-    fonts = typst.Fonts(include_system_fonts=False, include_embedded_fonts=False, font_paths=[str(FONTS_DIR)])
+    fonts = typst.Fonts(include_system_fonts=False, include_embedded_fonts=False, font_paths=font_dirs())
     typst.Compiler(str(build / "main.typ"), root=str(build), font_paths=fonts).compile(output=str(raw))
     fixed = tmp_path / "fixed.pdf"
     fixed.write_bytes(raw.read_bytes())

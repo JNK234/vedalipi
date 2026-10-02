@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -11,12 +12,19 @@ from pathlib import Path
 from ..schema import Master
 from .document import build_document
 from .fonts import SCRIPTS, script_font
+from .svarafont import derive_fonts
 from .textlayer import fix_split_clusters
 
 FONTS_DIR = Path(__file__).resolve().parents[3] / "fonts"
 TEMPLATE = Path(__file__).resolve().parent / "book.typ"
 
-__all__ = ["FONTS_DIR", "SCRIPTS", "build_dir_for", "render_pdf", "script_font"]
+__all__ = ["FONTS_DIR", "SCRIPTS", "build_dir_for", "font_dirs", "render_pdf", "script_font"]
+
+
+def font_dirs(fonts_dir: Path = FONTS_DIR) -> list[str]:
+    """The vendored fonts plus their svara-emphasised copies, derived once into the user cache."""
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "vedalipi" / "fonts"
+    return [str(fonts_dir), str(derive_fonts(fonts_dir, cache))]
 
 
 def build_dir_for(work_dir: Path, script: str, side_by_side: bool) -> Path:
@@ -38,7 +46,8 @@ def render_pdf(
 
     `master` is the Devanagari original: embedded as a PDF attachment and, with side_by_side,
     typeset next to the target text. Image blocks are cropped by bbox from
-    work_dir/pages/pNNNN/pre.png (falling back to source.png). Line height ~1.9; fonts only from fonts_dir.
+    work_dir/pages/pNNNN/pre.png (falling back to source.png). Line pitch 1.42 em, 1.97 em for svara-marked
+    blocks; fonts only from fonts_dir and the svara-emphasised copies derived from it.
     """
     import typst
 
@@ -55,8 +64,8 @@ def render_pdf(
     out_pdf = Path(out_pdf)
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
     tmp = out_pdf.with_name(f".{out_pdf.name}.tmp.pdf")
-    # Only vendored fonts: no system fonts and none of Typst's embedded defaults.
-    fonts = typst.Fonts(include_system_fonts=False, include_embedded_fonts=False, font_paths=[str(fonts_dir)])
+    # Only vendored fonts (and copies derived from them): no system fonts, none of Typst's embedded defaults.
+    fonts = typst.Fonts(include_system_fonts=False, include_embedded_fonts=False, font_paths=font_dirs(fonts_dir))
     compiler = typst.Compiler(str(build / "main.typ"), root=str(build), font_paths=fonts, ignore_system_fonts=True)
     _, warnings = compiler.compile_with_warnings(output=str(tmp), format="pdf")
     for w in warnings:
