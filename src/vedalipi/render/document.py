@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import re
-import unicodedata
 from itertools import pairwise
 from pathlib import Path
 
@@ -30,8 +29,10 @@ STYLE = {
     "margin_right": 79.2,
     "margin_top": 80,
     "margin_bottom": 76,
+    # Every printed line stays one output line: a block too wide for the page is set smaller, down to this.
+    "min_size": 12.0,  # pt
 }
-STYLE_SIDE_BY_SIDE = {**STYLE, "size": 11.5, "margin_left": 54, "margin_right": 54}
+STYLE_SIDE_BY_SIDE = {**STYLE, "size": 11.5, "min_size": 8.25, "margin_left": 54, "margin_right": 54}
 
 # Vedic accents and their stand-ins: a block carrying any of them gets the wider Vedic line pitch.
 SVARA_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3]")
@@ -99,76 +100,6 @@ def merge_contents(blocks: list[Block]) -> list[Block]:
         out.append(b.model_copy(deep=True) if is_toc else b)
     out.extend(pending)
     return out
-
-
-# A line that ends a printed sentence or bracketed aside ends a paragraph in prose.
-SENTENCE_END_RE = re.compile(r"[।॥)\]]\s*$")
-
-
-def text_measure(page: Page) -> int:
-    """Characters in the page's longest prose or verse line: roughly what a full printed line holds."""
-    return max((len(ln.strip()) for b in page.blocks if b.type in ("prose", "verse") for ln in b.lines), default=0)
-
-
-def prose_paragraphs(lines: list[str], measure: int = 0) -> list[list[str]]:
-    """Group a prose block's printed lines into paragraphs. A line ending in a danda or bracket, or
-    clearly shorter than a full printed line (`measure` characters, else the block's longest line),
-    ends its paragraph; only true wrapped continuation lines are joined and reflowed."""
-    longest = max(measure, max((len(ln.strip()) for ln in lines), default=0))
-    paras: list[list[str]] = [[]]
-    for ln in lines:
-        paras[-1].append(ln)
-        if SENTENCE_END_RE.search(ln) or len(ln.strip()) < 0.75 * longest:
-            paras.append([])
-    return [p for p in paras if p]
-
-
-# A line ending in a danda (or "॥ १ ॥") closes a verse or sentence; any other line break in Vedic text is
-# only where the printed column ran out.
-VERSE_END_RE = re.compile(r"[।॥]\s*$")
-# Vedic accent marks, ignored when looking at the letter a line ends on.
-TRAILING_SVARAS_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3]+$")
-# A sibilant + virama opening a line (स्त, श्च, ಸ್ತ, స్త...): the sandhi form of a visarga ending the
-# previous word, so the break fell inside one written word.
-SANDHI_START_RE = re.compile("^[\u0936-\u0938\u0CB6-\u0CB8\u0C36-\u0C38][\u094D\u0CCD\u0C4D]")
-
-
-def _joins_mid_word(prev: str, nxt: str) -> bool:
-    """Whether a printed line break between `prev` and `nxt` splits a written word: the next line opens
-    on a combining sign, or on a sandhi'd visarga after a line ending in a bare vowel or letter."""
-    if not nxt:
-        return False
-    if unicodedata.category(nxt[0]).startswith("M"):
-        return True
-    tail = TRAILING_SVARAS_RE.sub("", prev.rstrip())
-    if not tail or not SANDHI_START_RE.match(nxt):
-        return False
-    name = unicodedata.name(tail[-1], "")
-    return ("VOWEL SIGN" in name or "LETTER" in name) and "VIRAMA" not in name
-
-
-def vedic_paragraphs(lines: list[str]) -> list[str]:
-    """Reflow svara-marked text: consecutive printed lines are joined until one ends in । or ॥, so only
-    real verse and sentence ends break the line. A break inside a word (a trailing hyphen, or one of
-    the cases `_joins_mid_word` detects) joins with no space."""
-    paras: list[str] = []
-    cur = ""
-    for raw in lines:
-        ln = raw.strip()
-        if not ln:
-            continue
-        if not cur:
-            cur = ln
-        elif cur.endswith("-"):
-            cur = cur[:-1] + ln
-        else:
-            cur += ("" if _joins_mid_word(cur, ln) else " ") + ln
-        if VERSE_END_RE.search(cur):
-            paras.append(cur)
-            cur = ""
-    if cur:
-        paras.append(cur)
-    return paras
 
 
 def is_edge_artifact(block: Block) -> bool:
@@ -254,7 +185,7 @@ def family_chain(family: str) -> list[str]:
 
 def _block_data(
     block: Block, orig: Block | None, page: Page, script: str, side_by_side: bool, work_dir: Path, build_dir: Path,
-    index: int, measure: int = 0,
+    index: int,
 ) -> dict:
     d: dict = {"id": block.id, "type": block.type, "align": block.align, "level": block.level or 1, **_font(block, script)}
     d["tight_above"] = d["tight_below"] = False
@@ -269,15 +200,6 @@ def _block_data(
     if show_orig:
         d["orig"] = {"lines": orig.lines, "rows": orig.rows or [], **_font(orig, "devanagari")}
 
-    if block.type == "prose":
-        d["paras"] = prose_paragraphs(block.lines, measure)
-        if d["orig"]:
-            d["orig"]["paras"] = prose_paragraphs(orig.lines, measure)
-    if block.type == "verse" and d["vedic"]:
-        # Vedic text printed as run-on lines flows as paragraphs; plain verse keeps its printed lines.
-        d["flow"] = vedic_paragraphs(block.lines)
-        if d["orig"]:
-            d["orig"]["flow"] = vedic_paragraphs(orig.lines)
     if block.type == "fill_blank":
         d["segs"] = [blank_segments(line) for line in block.lines]
         if d["orig"]:
@@ -335,7 +257,7 @@ def build_document(
         except KeyError:
             orig_blocks = {}
         blocks = [
-            _block_data(b, orig_blocks.get(b.id), page, script, side_by_side, work_dir, build_dir, i, text_measure(page))
+            _block_data(b, orig_blocks.get(b.id), page, script, side_by_side, work_dir, build_dir, i)
             for i, b in enumerate(merge_contents(body), 1)
         ]
         # Consecutive list items sit closer together, like a printed list.

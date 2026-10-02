@@ -115,22 +115,38 @@
 // Regular weight at every level, as prapatti sets its titles (23.91pt over a 16.74pt body).
 #let heading-size(level) = if level <= 1 { 1.43em } else if level == 2 { 1.2em } else { 1.08em }
 
-// Content of one block for one font source (the target text, or the Devanagari original side by side).
-#let body-of(b, src) = {
+// Printed lines keep the source's line breaks: one output line per printed line. A block whose widest
+// line overruns `width` at the body size is set smaller, one size for the whole block, never below
+// S.min_size; a line still too wide at that size wraps with a hanging indent and is reported (<wrapped>).
+// Needs context (for measure); `width` is the absolute width the lines are set in.
+#let fit-scale(f, lines, width) = {
+  let widest = calc.max(0pt, ..lines.map(l => measure(styled(f, [#l])).width))
+  // A hair of slack so rounding never pushes a line that fits just onto a second line.
+  let room = width * 0.995
+  if widest <= room { 1.0 } else { calc.max(S.min_size / S.size, room / widest) }
+}
+// Records the size a block was set at and any line that still wraps, for the render log.
+#let fit-report(b, f, lines, width, k) = {
+  [#metadata((id: b.id, size: k * S.size)) <fitted>]
+  for (i, l) in lines.enumerate() {
+    if k * measure(styled(f, [#l])).width > width { [#metadata((id: b.id, line: i, text: l, over: k * measure(styled(f, [#l])).width / width)) <wrapped>] }
+  }
+}
+#let printed-lines(b, f, lines, width) = {
+  let k = fit-scale(f, lines, width)
+  fit-report(b, f, lines, width, k)
+  // Leading is in em, so the line pitch (and the wider Vedic pitch) shrinks in proportion with the text.
+  text(size: k * 1em, styled(f, lines.map(l => par(hanging-indent: 2em, [#l])).join()))
+}
+
+// Content of one block for one font source (the target text, or the Devanagari original side by side),
+// set in `width`.
+#let body-of(b, src, width) = {
   let f = (font: src.font, lang: src.lang, scale: src.at("scale", default: 1.0))
   if b.type == "heading" {
     styled(f, text(size: heading-size(b.level), join-lines(src.lines)))
-  } else if b.type == "verse" and src.flow.len() > 0 {
-    // Svara-marked text reflowed into paragraphs that break only at a danda (see vedic_paragraphs).
-    styled(f, src.flow.map(p => par([#p])).join())
-  } else if b.type == "verse" {
-    // One paragraph per printed line; a line too long for the measure wraps with a hanging indent.
-    styled(f, src.lines.map(l => par(hanging-indent: 2em, [#l])).join())
-  } else if b.type == "prose" {
-    // Printed paragraphs stay apart; only wrapped continuation lines are joined, and only those of a
-    // left-aligned block justified (a centred block stays ragged). Paragraphs of one block sit a plain
-    // line apart, as the printed lines did.
-    styled(f, src.paras.map(p => par(justify: p.len() > 1 and b.align == "left", p.join(" "))).join())
+  } else if b.type == "verse" or b.type == "prose" {
+    printed-lines(b, f, src.lines, width)
   } else if b.type == "list_item" {
     styled(f, grid(columns: (1.6em, 1fr), column-gutter: 0.2em, [#src.marker], src.lines.join(" ")))
   } else if b.type == "fill_blank" {
@@ -172,7 +188,7 @@
   image(b.image, width: b.width * 100%)
 }))
 
-#let render-block(b) = {
+#let render-block(b) = context {
   if b.type == "image" { return render-image(b) }
   if b.type == "separator" { return align(center, block(above: 1em, below: 1em, line(length: 28%, stroke: 0.6pt + gray))) }
   let a = al(b.align)
@@ -184,28 +200,37 @@
   let space = if b.tight_above or b.tight_below {
     (above: if b.tight_above { lead + 0.12em } else { gap }, below: if b.tight_below { lead + 0.12em } else { gap })
   } else if b.type == "heading" { (above: lead + 1.0em, below: lead + 0.8em) } else { (above: gap, below: gap) }
-  let target = (font: b.font, lang: b.lang, scale: b.scale, lines: b.lines, rows: b.rows, segs: b.at("segs", default: ()), paras: b.at("paras", default: ()), flow: b.at("flow", default: ()), marker: b.at("marker", default: "•"))
+  let target = (font: b.font, lang: b.lang, scale: b.scale, lines: b.lines, rows: b.rows, segs: b.at("segs", default: ()), marker: b.at("marker", default: "•"))
+  let full = page.width - (S.margin_left + S.margin_right) * 1pt
+  let gutter = 1.6em.to-absolute()
+  let half = (full - gutter) / 2
   // Short tables stay whole rather than stranding a header row at the foot of a page.
   let whole = b.type == "table" and b.rows.len() <= 10
   // A heading is sticky: it never strands at the foot of a page away from the block it introduces.
   let sticky = b.type == "heading"
   if b.orig == none {
-    block(width: 100%, breakable: not whole, sticky: sticky, ..space, align(a, body-of(b, target)))
+    block(width: 100%, breakable: not whole, sticky: sticky, ..space, align(a, body-of(b, target, full)))
   } else {
     let o = b.orig
-    let orig = (font: o.font, lang: o.lang, scale: o.scale, lines: o.lines, rows: o.rows, segs: o.at("segs", default: ()), paras: o.at("paras", default: ()), flow: o.at("flow", default: ()), marker: o.at("marker", default: "•"))
-    let two(x, y) = grid(columns: (1fr, 1fr), column-gutter: 1.6em, align(a, x), align(a, y))
-    if b.type == "verse" and b.at("flow", default: ()).len() == 0 and o.lines.len() == b.lines.len() {
-      // Line-by-line pairing keeps each Devanagari line level with its transliteration.
+    let orig = (font: o.font, lang: o.lang, scale: o.scale, lines: o.lines, rows: o.rows, segs: o.at("segs", default: ()), marker: o.at("marker", default: "•"))
+    let two(x, y) = grid(columns: (1fr, 1fr), column-gutter: gutter, align(a, x), align(a, y))
+    if b.type in ("verse", "prose") and o.lines.len() == b.lines.len() {
+      // Line-by-line pairing keeps each Devanagari line level with its transliteration; each side is
+      // fitted to its column as a whole, so all its lines share one size.
+      let ko = fit-scale(orig, o.lines, half)
+      let kt = fit-scale(target, b.lines, half)
+      let cell(f, k, l) = text(size: k * 1em, styled(f, par(hanging-indent: 2em, [#l])))
+      fit-report(b, orig, o.lines, half, ko)
+      fit-report(b, target, b.lines, half, kt)
       block(width: 100%, ..space, grid(
-        columns: (1fr, 1fr), column-gutter: 1.6em, row-gutter: lead,
+        columns: (1fr, 1fr), column-gutter: gutter, row-gutter: lead,
         ..range(b.lines.len()).map(i => (
-          align(a, styled(orig, [#o.lines.at(i)])),
-          align(a, styled(target, [#b.lines.at(i)])),
+          align(a, cell(orig, ko, o.lines.at(i))),
+          align(a, cell(target, kt, b.lines.at(i))),
         )).flatten()
       ))
     } else {
-      block(width: 100%, breakable: not whole, sticky: sticky, ..space, two(body-of(b, orig), body-of(b, target)))
+      block(width: 100%, breakable: not whole, sticky: sticky, ..space, two(body-of(b, orig, half), body-of(b, target, half)))
     }
   }
 }

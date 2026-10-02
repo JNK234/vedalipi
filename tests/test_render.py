@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw
 
 from vedalipi import transliterate
 from vedalipi.render import FONTS_DIR, build_dir_for, font_dirs, render_pdf
-from vedalipi.render.document import blank_segments, split_marker, vedic_paragraphs
+from vedalipi.render.document import blank_segments, split_marker
 from vedalipi.render.fonts import SCRIPTS, font_chain
 from vedalipi.schema import Block, Master, Page
 
@@ -150,25 +150,41 @@ def test_footer_shows_source_page(kannada_pdf):
             assert "/" not in foot
 
 
-def test_vedic_lines_flow_until_a_danda():
-    lines = [
-        "ओं नम॒स्सद॑से । नमः॒ सखी॑नां चक्षु॑षे । नमो॑",
-        "दि॒वे । ये च॒ सभ्या᳚स्सभा॒सदः॑ ॥",
-        "भ॒द्रं प॑श्येमा॒क्षभि॒र्यज॑त्राः। स्थि॒रैरङ्गै᳚",
-        "स्तुष्टु॒वाꣳस॑स्त॒नूभिः॑ ।",
-        "तुरकास्य लास्य-",
-        "विभव ॥ १ ॥",
-        "शान्तिः॑",
-    ]
-    assert vedic_paragraphs(lines) == [
-        "ओं नम॒स्सद॑से । नमः॒ सखी॑नां चक्षु॑षे । नमो॑ दि॒वे । ये च॒ सभ्या᳚स्सभा॒सदः॑ ॥",
-        "भ॒द्रं प॑श्येमा॒क्षभि॒र्यज॑त्राः। स्थि॒रैरङ्गै᳚स्तुष्टु॒वाꣳस॑स्त॒नूभिः॑ ।",
-        "तुरकास्य लास्यविभव ॥ १ ॥",
-        "शान्तिः॑",
-    ]
-    # Kannada: the same sandhi split joins with no space; a visarga before स्त keeps its space.
-    assert vedic_paragraphs(["ಸ್ಥಿರೈರಙ್ಗೈ᳚", "ಸ್ತುಷ್ಟು॒ವಾ ।"]) == ["ಸ್ಥಿರೈರಙ್ಗೈ᳚ಸ್ತುಷ್ಟು॒ವಾ ।"]
-    assert vedic_paragraphs(["नमः॑", "स्तुतिः ।"]) == ["नमः॑ स्तुतिः ।"]
+# A svara line about as long as the longest printed in the source book: too wide for the page at the body
+# size, narrow enough to fit at the smallest size.
+LONG_SVARA_LINE = "ओं भ॒द्रं कर्णे॑भिः शृणु॒याम॑ देवाः । भ॒द्रं प॑श्येमा॒क्षभि॒र्यज॑त्राः । स्थि॒रैरङ्गै᳚स्तुष्टु॒वाꣳस॑ ।"
+
+
+def baselines(pdf: Path) -> list[tuple[int, float]]:
+    """(page, baseline y) of every body text line, header and footer excluded, with its largest span size."""
+    rows: dict[tuple[int, int], float] = {}
+    with pymupdf.open(pdf) as doc:
+        for n, page in enumerate(doc):
+            for blk in page.get_text("dict")["blocks"]:
+                for line in blk.get("lines", []):
+                    for span in line["spans"]:
+                        y = span["origin"][1]
+                        if span["text"].strip() and 75 < y < page.rect.height - 70:
+                            key = (n, round(y / 3))
+                            rows[key] = max(rows.get(key, 0.0), span["size"])
+    return sorted(rows.items())
+
+
+def test_each_printed_line_is_one_output_line(tmp_path):
+    """A long svara line is set smaller rather than wrapped or merged; prose keeps its printed lines too."""
+    page = Page(page=1, blocks=[
+        Block(id="v", type="verse", lines=[LONG_SVARA_LINE, "व्यशे॑म दे॒वहि॑तं॒ यदायुः॑ ॥ १ ॥"]),
+        Block(id="p", type="prose", lines=["आचम्य पवित्रपाणिः शुद्धभूमौ कदळ्यादिदले", "प्रस्थद्वयमितं तण्डुलं निक्षिप्य", "कुम्भं निधाय ।"]),
+    ])
+    master = Master(title="t", source="t.pdf", pages=[page])
+    out = tmp_path / "lines.pdf"
+    render_pdf(master, transliterate.transliterate_master(master, "kannada"), out, script="kannada", work_dir=tmp_path / "work")
+    rows = baselines(out)
+    assert len(rows) == 5, rows
+    sizes = [size for _, size in rows]
+    # The verse is set at one size below the body size (never below the floor); the prose fits as is.
+    assert 12.0 <= sizes[0] == sizes[1] < 16.74
+    assert sizes[2:] == pytest.approx([16.74] * 3)
 
 
 def test_side_by_side_telugu(tmp_path):
@@ -325,19 +341,6 @@ def test_textlayer_keeps_identical_clusters_on_separate_lines(tmp_path):
     text = pdf_text(out)
     assert text.count("ಕ್ಷ") == 5, text
     assert "ಅ॒ಗ್ನಿ" in text and "ಅ॒ಅ॒" not in text
-
-
-def test_prose_keeps_printed_paragraphs_and_joins_only_wrapped_lines():
-    from vedalipi.render.document import prose_paragraphs
-
-    lines = [
-        "आचम्य पवित्रपाणिः शुद्धभूमौ कदळ्यादिदले प्रस्थद्वयमितं तण्डुलं निक्षिप्य,",
-        "कुम्भं निधाय प्रणवव्याहृतिभिरद्भिः पूरयित्वा कूर्चं आम्रपल्लवादिभिरलंकृत्य ।",
-        "ओं विष्वक्सेनाय नमः धूपं समर्पयामि",
-        "[पुण्याहे चतुरो ब्राह्मणान् तोषयिष्ये]",
-        "दक्षिणकरतलेन कुम्भं समालभ्य",
-    ]
-    assert prose_paragraphs(lines) == [lines[:2], [lines[2]], [lines[3]], [lines[4]]]
 
 
 def test_contents_split_by_ocr_is_rejoined_into_one_table():

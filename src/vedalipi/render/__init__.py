@@ -70,5 +70,11 @@ def render_pdf(
     _, warnings = compiler.compile_with_warnings(output=str(tmp), format="pdf")
     for w in warnings:
         print(f"typst warning: {w.message}", file=sys.stderr)
+    # A printed line too wide for the page even at the smallest size wraps; say which (see book.typ).
+    wrapped = json.loads(compiler.query("<wrapped>", field="value"))
+    for m in wrapped[:10]:
+        print(f"vedalipi: block {m['id']} line {m['line'] + 1} wraps even at {doc['style']['min_size']}pt: {m['text'][:40]}…", file=sys.stderr)
+    if len(wrapped) > 10:
+        print(f"vedalipi: ...and {len(wrapped) - 10} more wrapped lines", file=sys.stderr)
     fix_split_clusters(tmp)
     tmp.replace(out_pdf)
