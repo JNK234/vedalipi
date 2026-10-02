@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from itertools import pairwise
 from pathlib import Path
 
@@ -122,6 +123,54 @@ def prose_paragraphs(lines: list[str], measure: int = 0) -> list[list[str]]:
     return [p for p in paras if p]
 
 
+# A line ending in a danda (or "॥ १ ॥") closes a verse or sentence; any other line break in Vedic text is
+# only where the printed column ran out.
+VERSE_END_RE = re.compile(r"[।॥]\s*$")
+# Vedic accent marks, ignored when looking at the letter a line ends on.
+TRAILING_SVARAS_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3]+$")
+# A sibilant + virama opening a line (स्त, श्च, ಸ್ತ, స్త...): the sandhi form of a visarga ending the
+# previous word, so the break fell inside one written word.
+SANDHI_START_RE = re.compile("^[\u0936-\u0938\u0CB6-\u0CB8\u0C36-\u0C38][\u094D\u0CCD\u0C4D]")
+
+
+def _joins_mid_word(prev: str, nxt: str) -> bool:
+    """Whether a printed line break between `prev` and `nxt` splits a written word: the next line opens
+    on a combining sign, or on a sandhi'd visarga after a line ending in a bare vowel or letter."""
+    if not nxt:
+        return False
+    if unicodedata.category(nxt[0]).startswith("M"):
+        return True
+    tail = TRAILING_SVARAS_RE.sub("", prev.rstrip())
+    if not tail or not SANDHI_START_RE.match(nxt):
+        return False
+    name = unicodedata.name(tail[-1], "")
+    return ("VOWEL SIGN" in name or "LETTER" in name) and "VIRAMA" not in name
+
+
+def vedic_paragraphs(lines: list[str]) -> list[str]:
+    """Reflow svara-marked text: consecutive printed lines are joined until one ends in । or ॥, so only
+    real verse and sentence ends break the line. A break inside a word (a trailing hyphen, or one of
+    the cases `_joins_mid_word` detects) joins with no space."""
+    paras: list[str] = []
+    cur = ""
+    for raw in lines:
+        ln = raw.strip()
+        if not ln:
+            continue
+        if not cur:
+            cur = ln
+        elif cur.endswith("-"):
+            cur = cur[:-1] + ln
+        else:
+            cur += ("" if _joins_mid_word(cur, ln) else " ") + ln
+        if VERSE_END_RE.search(cur):
+            paras.append(cur)
+            cur = ""
+    if cur:
+        paras.append(cur)
+    return paras
+
+
 def is_edge_artifact(block: Block) -> bool:
     """A thin "image" hugging the page edge is the scan's dark border or binding shadow, not content."""
     if block.type != "image" or not block.bbox:
@@ -224,6 +273,11 @@ def _block_data(
         d["paras"] = prose_paragraphs(block.lines, measure)
         if d["orig"]:
             d["orig"]["paras"] = prose_paragraphs(orig.lines, measure)
+    if block.type == "verse" and d["vedic"]:
+        # Vedic text printed as run-on lines flows as paragraphs; plain verse keeps its printed lines.
+        d["flow"] = vedic_paragraphs(block.lines)
+        if d["orig"]:
+            d["orig"]["flow"] = vedic_paragraphs(orig.lines)
     if block.type == "fill_blank":
         d["segs"] = [blank_segments(line) for line in block.lines]
         if d["orig"]:

@@ -55,25 +55,22 @@
   ]
 }
 
+// The footer numbers output pages in one plain sequence, centred; the source scan pages the page draws
+// from sit on the right in the same "src p. N" form the mid-page source dividers use. (Printed source
+// numbers are left out: one source page spans several output pages, and the book mixes numbering styles.)
 #let page-footer() = context {
   let cov = covering()
-  if cov.len() == 0 { return }
-  let printed = cov.map(m => if m.value.printed == none { none } else { m.value.printed }).filter(p => p != none)
   let scans = cov.map(m => str(m.value.page))
-  let scan-label = latin(size: 0.68em, fill: gray)[
-    #if scans.len() == 1 [src p. #scans.first()] else [src pp. #scans.first()–#scans.last()]
-  ]
-  let middle = if printed.len() > 0 {
-    text(size: 0.85em, printed.join(" / "))
-  } else {
-    latin(size: 0.85em, scans.join(" / "))
+  let scan-label = if scans.len() == 0 { [] } else {
+    latin(size: 0.68em, fill: gray)[
+      #if scans.len() == 1 [src p. #scans.first()] else [src pp. #scans.first()–#scans.last()]
+    ]
   }
-  let odd = calc.odd(here().page())
   grid(
     columns: (1fr, auto, 1fr),
-    align(left, if odd { [] } else { scan-label }),
-    align(center, middle),
-    align(right, if odd { scan-label } else { [] }),
+    [],
+    align(center, latin(size: 0.85em, str(here().page()))),
+    align(right, scan-label),
   )
 }
 
@@ -123,13 +120,17 @@
   let f = (font: src.font, lang: src.lang, scale: src.at("scale", default: 1.0))
   if b.type == "heading" {
     styled(f, text(size: heading-size(b.level), join-lines(src.lines)))
+  } else if b.type == "verse" and src.flow.len() > 0 {
+    // Svara-marked text reflowed into paragraphs that break only at a danda (see vedic_paragraphs).
+    styled(f, src.flow.map(p => par([#p])).join())
   } else if b.type == "verse" {
     // One paragraph per printed line; a line too long for the measure wraps with a hanging indent.
     styled(f, src.lines.map(l => par(hanging-indent: 2em, [#l])).join())
   } else if b.type == "prose" {
-    // Printed paragraphs stay apart; only wrapped continuation lines are joined, and only those justified.
-    // Paragraphs of one block sit a plain line apart, as the printed lines did.
-    styled(f, src.paras.map(p => par(justify: p.len() > 1, p.join(" "))).join())
+    // Printed paragraphs stay apart; only wrapped continuation lines are joined, and only those of a
+    // left-aligned block justified (a centred block stays ragged). Paragraphs of one block sit a plain
+    // line apart, as the printed lines did.
+    styled(f, src.paras.map(p => par(justify: p.len() > 1 and b.align == "left", p.join(" "))).join())
   } else if b.type == "list_item" {
     styled(f, grid(columns: (1.6em, 1fr), column-gutter: 0.2em, [#src.marker], src.lines.join(" ")))
   } else if b.type == "fill_blank" {
@@ -183,16 +184,18 @@
   let space = if b.tight_above or b.tight_below {
     (above: if b.tight_above { lead + 0.12em } else { gap }, below: if b.tight_below { lead + 0.12em } else { gap })
   } else if b.type == "heading" { (above: lead + 1.0em, below: lead + 0.8em) } else { (above: gap, below: gap) }
-  let target = (font: b.font, lang: b.lang, scale: b.scale, lines: b.lines, rows: b.rows, segs: b.at("segs", default: ()), paras: b.at("paras", default: ()), marker: b.at("marker", default: "•"))
+  let target = (font: b.font, lang: b.lang, scale: b.scale, lines: b.lines, rows: b.rows, segs: b.at("segs", default: ()), paras: b.at("paras", default: ()), flow: b.at("flow", default: ()), marker: b.at("marker", default: "•"))
   // Short tables stay whole rather than stranding a header row at the foot of a page.
   let whole = b.type == "table" and b.rows.len() <= 10
+  // A heading is sticky: it never strands at the foot of a page away from the block it introduces.
+  let sticky = b.type == "heading"
   if b.orig == none {
-    block(width: 100%, breakable: not whole, ..space, align(a, body-of(b, target)))
+    block(width: 100%, breakable: not whole, sticky: sticky, ..space, align(a, body-of(b, target)))
   } else {
     let o = b.orig
-    let orig = (font: o.font, lang: o.lang, scale: o.scale, lines: o.lines, rows: o.rows, segs: o.at("segs", default: ()), paras: o.at("paras", default: ()), marker: o.at("marker", default: "•"))
+    let orig = (font: o.font, lang: o.lang, scale: o.scale, lines: o.lines, rows: o.rows, segs: o.at("segs", default: ()), paras: o.at("paras", default: ()), flow: o.at("flow", default: ()), marker: o.at("marker", default: "•"))
     let two(x, y) = grid(columns: (1fr, 1fr), column-gutter: 1.6em, align(a, x), align(a, y))
-    if b.type == "verse" and o.lines.len() == b.lines.len() {
+    if b.type == "verse" and b.at("flow", default: ()).len() == 0 and o.lines.len() == b.lines.len() {
       // Line-by-line pairing keeps each Devanagari line level with its transliteration.
       block(width: 100%, ..space, grid(
         columns: (1fr, 1fr), column-gutter: 1.6em, row-gutter: lead,
@@ -202,7 +205,7 @@
         )).flatten()
       ))
     } else {
-      block(width: 100%, breakable: not whole, ..space, two(body-of(b, orig), body-of(b, target)))
+      block(width: 100%, breakable: not whole, sticky: sticky, ..space, two(body-of(b, orig), body-of(b, target)))
     }
   }
 }
@@ -212,7 +215,7 @@
 #let page-start(p, first) = block(sticky: true, above: if first { 0pt } else { 0.9em }, below: 0.4em, width: 100%)[
   #metadata((page: p.page, printed: p.printed, header: p.header, logo: p.logo)) <srcpage>
   #if not first {
-    align(right, latin(size: 0.58em, fill: luma(150), top-edge: "cap-height", bottom-edge: "baseline")[p. #p.page])
+    align(right, latin(size: 0.58em, fill: luma(150), top-edge: "cap-height", bottom-edge: "baseline")[src p. #p.page])
   }
 ]
 

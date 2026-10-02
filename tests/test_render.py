@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw
 
 from vedalipi import transliterate
 from vedalipi.render import FONTS_DIR, build_dir_for, font_dirs, render_pdf
-from vedalipi.render.document import blank_segments, split_marker
+from vedalipi.render.document import blank_segments, split_marker, vedic_paragraphs
 from vedalipi.render.fonts import SCRIPTS, font_chain
 from vedalipi.schema import Block, Master, Page
 
@@ -141,9 +141,34 @@ def test_image_crop_embedded(kannada_pdf):
 
 
 def test_footer_shows_source_page(kannada_pdf):
-    text = pdf_text(kannada_pdf)
-    assert "src p. 7" in text or "src pp. 7" in text
-    assert "೭" in text
+    with pymupdf.open(kannada_pdf) as doc:
+        for i, page in enumerate(doc, 1):
+            foot = page.get_text(clip=pymupdf.Rect(0, page.rect.height - 70, page.rect.width, page.rect.height))
+            # One plain sequential page number per page, and the source label in one form.
+            assert str(i) in foot.split()
+            assert "src p. " in foot or "src pp. " in foot
+            assert "/" not in foot
+
+
+def test_vedic_lines_flow_until_a_danda():
+    lines = [
+        "ओं नम॒स्सद॑से । नमः॒ सखी॑नां चक्षु॑षे । नमो॑",
+        "दि॒वे । ये च॒ सभ्या᳚स्सभा॒सदः॑ ॥",
+        "भ॒द्रं प॑श्येमा॒क्षभि॒र्यज॑त्राः। स्थि॒रैरङ्गै᳚",
+        "स्तुष्टु॒वाꣳस॑स्त॒नूभिः॑ ।",
+        "तुरकास्य लास्य-",
+        "विभव ॥ १ ॥",
+        "शान्तिः॑",
+    ]
+    assert vedic_paragraphs(lines) == [
+        "ओं नम॒स्सद॑से । नमः॒ सखी॑नां चक्षु॑षे । नमो॑ दि॒वे । ये च॒ सभ्या᳚स्सभा॒सदः॑ ॥",
+        "भ॒द्रं प॑श्येमा॒क्षभि॒र्यज॑त्राः। स्थि॒रैरङ्गै᳚स्तुष्टु॒वाꣳस॑स्त॒नूभिः॑ ।",
+        "तुरकास्य लास्यविभव ॥ १ ॥",
+        "शान्तिः॑",
+    ]
+    # Kannada: the same sandhi split joins with no space; a visarga before स्त keeps its space.
+    assert vedic_paragraphs(["ಸ್ಥಿರೈರಙ್ಗೈ᳚", "ಸ್ತುಷ್ಟು॒ವಾ ।"]) == ["ಸ್ಥಿರೈರಙ್ಗೈ᳚ಸ್ತುಷ್ಟು॒ವಾ ।"]
+    assert vedic_paragraphs(["नमः॑", "स्तुतिः ।"]) == ["नमः॑ स्तुतिः ।"]
 
 
 def test_side_by_side_telugu(tmp_path):
