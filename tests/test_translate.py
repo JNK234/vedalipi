@@ -312,7 +312,7 @@ def test_apply_translation_replaces_other_languages_and_returns_meanings():
     })})
     target = transliterate.transliterate_master(m, "iast")
     tr.pages[1].source = tl.source_hash(tl.page_payload(m.page(1)))
-    out, meanings, missing, stale = tl.apply_translation(m, target, tr)
+    out, meanings, missing, _ = tl.apply_translation(m, target, tr)
     p1 = out.page(1)
     assert p1.block("b1").lines == ["Sandhya"] and p1.block("b1").lang == "en"
     assert p1.block("b2").lines == ["oṃ bhūrbhu̍va̍ḥ"] and p1.block("b2").lang == "sa"
