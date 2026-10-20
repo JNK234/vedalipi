@@ -163,11 +163,18 @@ def page_to_devanagari(page: Page, script: str) -> Page:
     return out
 
 
+_DEVA_DIGITS = str.maketrans("0123456789", "०१२३४५६७८९")
+
+
 def _roundtrip_key(text: str, script: str = DEVA) -> str:
     # The one sanctioned equivalence: targets without an om sign write ॐ as ओं (ಓಂ, ఓం), which reads back as ओं.
     key = normalize_text(text).replace("ॐ", "ओं")
-    # Roman schemes write the Vedic anusvara ꣳ as m̐, which reads back as candrabindu.
-    return key.replace(A8F3, "ँ") if is_roman(script) else key
+    if not is_roman(script):
+        return key
+    # Roman schemes write the Vedic anusvara ꣳ as m̐, which reads back as candrabindu; they have one set of
+    # digits, read back as Devanagari ones; and vidyut reads a word-final "-roṃ" back as र्ॐ, not रों.
+    key = key.replace("्ओं", "ों").replace(A8F3, "ँ")
+    return key.translate(_DEVA_DIGITS)
 
 
 def roundtrip_back(converted: str, script: str) -> str:

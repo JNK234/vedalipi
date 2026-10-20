@@ -455,3 +455,21 @@ def test_judge_checks_a_translated_edition(tmp_path):
     pipeline.render_from_master(cfg.out_dir, "iast", translation="en")
     report = judge.judge(cfg.out_dir, "iast", "en")
     assert not report["passed"] and report["untranslated"]
+
+
+@pytest.mark.parametrize("deva", ["4. तर्पयामि", "सुवरों मम", "॥3॥"])
+def test_roman_round_trip_accepts_digits_and_final_om_sign(deva):
+    raw, _ = transliterate._render_line(deva, "iast", None)
+    assert transliterate.roundtrip_ok(deva, raw, "iast")
+
+
+def test_roman_round_trip_still_catches_ambiguous_hiatus():
+    # ta + i and tai are one IAST spelling: the check must say so, not pass it.
+    raw, _ = transliterate._render_line("तइ॒मे", "iast", None)
+    assert not transliterate.roundtrip_ok("तइ॒मे", raw, "iast")
+
+
+def test_sanskrit_running_header_is_not_sent():
+    page = Page(page=1, blocks=[Block(id="b1", type="running_header", lang="sa", lines=["श्री गुरुभ्यो नमः"]),
+                                Block(id="b2", type="running_header", lang="te", lines=["సంధ్య"])])
+    assert [b["id"] for b in tl.page_payload(page)["blocks"]] == ["b2"]

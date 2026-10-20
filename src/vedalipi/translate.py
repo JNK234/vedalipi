@@ -114,14 +114,14 @@ def page_payload(page: Page, before: Page | None = None) -> dict:
 def block_item(b: Block) -> dict | None:
     """One block as the model sees it, or None when it has nothing to translate.
 
-    Sanskrit labels and Sanskrit tables are shown transliterated, with no meaning: they are not sent."""
+    Sanskrit labels, tables and running headers are shown transliterated, with no meaning: they are not sent."""
     if b.type == "image":
         labels = [lab.text for lab in b.labels or [] if not lab.is_sanskrit]
         if not labels:
             return None
         return {"id": b.id, "type": "image", "lang": b.lang, "labels": labels}
-    if b.type in SKIP_TYPES:
-        return None
+    if b.type in SKIP_TYPES or (b.type == "running_header" and b.is_sanskrit):
+        return None  # a Sanskrit running header is printed transliterated in the page header, with no meaning
     if b.rows is not None:
         if b.is_sanskrit:
             return None
