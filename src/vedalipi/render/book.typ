@@ -182,10 +182,38 @@
   }
 }
 
+// A drawing's label, set in the target script over the spot its printed text was whited out of: one line,
+// centred both ways in its box. Its size is the one at which its ink just fills the box, capped at the
+// drawing's typical label size (the median of those sizes) so the labels of one drawing match; it never
+// overflows its box either way. Needs context (for measure).
+#let set-label(l, size) = text(font: l.font, lang: l.lang, size: size, top-edge: "bounds", bottom-edge: "bounds", l.text)
+#let label-fit(l, w, h) = {
+  let m = measure(set-label(l, 10pt))
+  if m.width > 0pt and m.height > 0pt { calc.min(w / m.width, h / m.height) * 0.98 * 10pt } else { 10pt }
+}
+#let label-boxes(labels, w, h) = context {
+  let fits = labels.map(l => label-fit(l, l.w * w, l.h * h))
+  let sorted = fits.sorted()
+  let typical = sorted.at(calc.quo(sorted.len(), 2))
+  for (l, k) in labels.zip(fits) {
+    place(top + left, dx: l.x * w, dy: l.y * h,
+      box(width: l.w * w, height: l.h * h, align(center + horizon, set-label(l, calc.min(k, typical)))))
+  }
+}
+
 #let render-image(b) = align(center, block(above: 1.2em, below: 1.2em, if b.image == none {
   box(width: b.width * 100%, height: 3em, stroke: 0.5pt + gray, align(center + horizon, latin(size: 0.75em, fill: gray)[image not available]))
-} else {
+} else if b.at("labels", default: ()).len() == 0 {
   image(b.image, width: b.width * 100%)
+} else {
+  layout(size => {
+    let w = size.width * b.width
+    let h = w * b.aspect
+    box(width: w, height: h, {
+      place(top + left, image(b.image, width: w, height: h))
+      label-boxes(b.labels, w, h)
+    })
+  })
 }))
 
 #let render-block(b) = context {

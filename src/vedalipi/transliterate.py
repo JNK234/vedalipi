@@ -112,7 +112,7 @@ def _convert_line(text: str, script: str, a8f3: str | None) -> tuple[str, bool, 
 def transliterate_master(
     master: Master, script: str, *, a8f3: str | None = None, diagnostics: list[dict] | None = None
 ) -> Master:
-    """Return a copy of master with every lang=="sa" line and table cell in `script`.
+    """Return a copy of master with every lang=="sa" line, table cell and image label in `script`.
 
     Other languages pass through unchanged. Blocks with any failed round trip get "roundtrip_fail",
     and each failing string is appended to `diagnostics` as {page, block, text, converted, back}.
@@ -132,6 +132,12 @@ def transliterate_master(
                     _transliterate_block(block, script, a8f3, fails, runs_only=True)
             else:
                 _transliterate_block(block, script, a8f3, fails)
+            # Labels inside a drawing follow their own language, exactly as lines do.
+            for label in block.labels or []:
+                if label.is_sanskrit:
+                    label.text = _convert_string(label.text, script, a8f3, fails, runs_only=False)
+                elif _DEVA_RUN.search(label.text):
+                    label.text = _convert_string(label.text, script, a8f3, fails, runs_only=True)
             if fails:
                 block.add_flag(FLAG_ROUNDTRIP_FAIL)
                 if diagnostics is not None:

@@ -428,6 +428,15 @@ def apply_corrections(master: Master, corrections: list[Correction]) -> Master:
     out = master.model_copy(deep=True)
     for c in corrections:
         block = out.page(c.page).block(c.block_id)
+        if c.bbox is not None:
+            block.bbox = c.bbox
+        if c.type is not None:
+            block.type = c.type
+            if c.type == "image":
+                # A drawing carries no typeset text of its own: only its labels, if any.
+                block.lines, block.rows = [], None
+        if c.labels is not None:
+            block.labels = c.labels
         if c.lines is not None:
             block.lines = c.lines
         if c.rows is not None:
@@ -444,6 +453,12 @@ def apply_corrections(master: Master, corrections: list[Correction]) -> Master:
 def diagnostics_path(out_dir: Path, script: str) -> Path:
     """Where render writes the transliteration diagnostics (round-trip failures) for one script."""
     return Path(out_dir) / "work" / f"transliterate-{script}.json"
+
+
+def pdf_path(out_dir: Path, master: Master, script: str, *, side_by_side: bool = False) -> Path:
+    """Where render writes the PDF of one script: <out>/<source stem>.<script>[.side-by-side].pdf."""
+    stem = Path(master.source).stem or "book"
+    return Path(out_dir) / f"{stem}.{script}{'.side-by-side' if side_by_side else ''}.pdf"
 
 
 def render_from_master(out_dir: Path, script: str, *, side_by_side: bool = False) -> Path:
@@ -464,8 +479,7 @@ def _render(out_dir: Path, script: str, *, side_by_side: bool = False) -> Path:
     atomic_write_text(diagnostics_path(out_dir, script), json.dumps(diagnostics, ensure_ascii=False, indent=1) + "\n")
     for d in diagnostics:
         print(f"[p{d['page']:04d}] {d['block']}: round trip failed: {d['text']!r} -> {d['back']!r}", file=sys.stderr)
-    stem = Path(master.source).stem or "book"
-    out_pdf = out_dir / f"{stem}.{script}{'.side-by-side' if side_by_side else ''}.pdf"
+    out_pdf = pdf_path(out_dir, master, script, side_by_side=side_by_side)
     render_pdf(master, target, out_pdf, script=script, work_dir=out_dir / "work", side_by_side=side_by_side)
     return out_pdf
 

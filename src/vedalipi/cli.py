@@ -1,4 +1,4 @@
-# ABOUTME: Command-line entry point "vedalipi": run, render, report and apply-corrections.
+# ABOUTME: Command-line entry point "vedalipi": run, render, report, judge and apply-corrections.
 # ABOUTME: Thin argparse layer over pipeline.py; all work and caching happen in the pipeline.
 
 from __future__ import annotations
@@ -50,6 +50,14 @@ def _cmd_report(a: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_judge(a: argparse.Namespace) -> int:
+    from . import judge
+
+    report = judge.judge(Path(a.dir).expanduser().resolve(), a.script)
+    print(judge.summary(report))
+    return 0 if report["passed"] else 1
+
+
 def _cmd_apply(a: argparse.Namespace) -> int:
     out_dir = Path(a.dir).expanduser().resolve()
     data = json.loads(Path(a.corrections).read_text(encoding="utf-8"))
@@ -95,6 +103,12 @@ def build_parser() -> argparse.ArgumentParser:
     rp = sub.add_parser("report", help="stage status, OCR cost and flagged blocks")
     rp.add_argument("dir")
     rp.set_defaults(func=_cmd_report)
+
+    jd = sub.add_parser("judge", help="check that DIR's rendered PDF holds every line, cell and image of master.json")
+    jd.add_argument("dir")
+    jd.add_argument("--script", default="kannada", choices=supported_scripts(), metavar="SCRIPT",
+                    help="script of the PDF to check: kannada (default), telugu, devanagari, ...")
+    jd.set_defaults(func=_cmd_judge)
 
     ac = sub.add_parser("apply-corrections", help="apply a JSON list of corrections to DIR/master.json")
     ac.add_argument("dir")

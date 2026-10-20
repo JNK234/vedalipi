@@ -170,8 +170,8 @@ def baselines(pdf: Path) -> list[tuple[int, float]]:
     return sorted(rows.items())
 
 
-def test_each_printed_line_is_one_output_line(tmp_path):
-    """A long svara line is set smaller rather than wrapped or merged; prose keeps its printed lines too."""
+def test_every_block_keeps_the_body_size(tmp_path):
+    """A long svara line wraps at the body size rather than being set smaller; prose keeps its printed lines."""
     page = Page(page=1, blocks=[
         Block(id="v", type="verse", lines=[LONG_SVARA_LINE, "व्यशे॑म दे॒वहि॑तं॒ यदायुः॑ ॥ १ ॥"]),
         Block(id="p", type="prose", lines=["आचम्य पवित्रपाणिः शुद्धभूमौ कदळ्यादिदले", "प्रस्थद्वयमितं तण्डुलं निक्षिप्य", "कुम्भं निधाय ।"]),
@@ -180,11 +180,9 @@ def test_each_printed_line_is_one_output_line(tmp_path):
     out = tmp_path / "lines.pdf"
     render_pdf(master, transliterate.transliterate_master(master, "kannada"), out, script="kannada", work_dir=tmp_path / "work")
     rows = baselines(out)
-    assert len(rows) == 5, rows
-    sizes = [size for _, size in rows]
-    # The verse is set at one size below the body size (never below the floor); the prose fits as is.
-    assert 12.0 <= sizes[0] == sizes[1] < 16.74
-    assert sizes[2:] == pytest.approx([16.74] * 3)
+    # The long verse line wraps onto a second output line; every line is set at the body size.
+    assert len(rows) == 6, rows
+    assert [size for _, size in rows] == pytest.approx([16.74] * 6)
 
 
 def test_side_by_side_telugu(tmp_path):
@@ -383,3 +381,13 @@ def test_image_crops_never_share_a_filename(tmp_path):
     doc = build_document(master, master, script="kannada", side_by_side=False, work_dir=work, build_dir=tmp_path / "b")
     paths = [b["image"] for b in doc["pages"][0]["blocks"]]
     assert len(set(paths)) == 2 and all((tmp_path / "b" / p).exists() for p in paths)
+
+
+def test_verse_number_stays_with_its_line():
+    from vedalipi.render.document import keep_verse_number
+
+    out = keep_verse_number("स्तोत्रं परमां चक्रसायुज्यलक्ष्मीम्   ॥ १०१॥")
+    assert out.startswith("स्तोत्रं परमां ")  # earlier words still break normally
+    assert " " not in out.split("परमां ", 1)[1]  # no breaking space in the closing word + number
+    assert "॥⁠" in out  # no break after a danda inside the number
+    assert keep_verse_number("ಓಂ ನಮಃ (10)") == "ಓಂ ನಮಃ (10)"

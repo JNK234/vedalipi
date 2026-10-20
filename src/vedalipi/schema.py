@@ -73,6 +73,37 @@ class _JsonModel(BaseModel):
         return self.model_dump_json(indent=2)
 
 
+def _check_bbox_value(v: list[float] | None) -> list[float] | None:
+    if v is None:
+        return v
+    if len(v) != 4:
+        raise ValueError("bbox must be [x0, y0, x1, y1]")
+    x0, y0, x1, y1 = v
+    if not all(0.0 <= c <= 1.0 for c in v) or x0 > x1 or y0 > y1:
+        raise ValueError(f"bbox must be normalized 0-1 with x0<=x1, y0<=y1: {v}")
+    return v
+
+
+class Label(_JsonModel):
+    """A text label printed inside a drawing (an image block): shown in the target script over the drawing.
+
+    bbox is in normalized page coordinates, like Block.bbox, and covers exactly the label's printed ink.
+    """
+
+    text: str
+    lang: str = "sa"
+    bbox: list[float]
+
+    @field_validator("bbox")
+    @classmethod
+    def _check_bbox(cls, v: list[float]) -> list[float]:
+        return _check_bbox_value(v)
+
+    @property
+    def is_sanskrit(self) -> bool:
+        return self.lang == "sa"
+
+
 class Block(_JsonModel):
     """One layout unit on a page. Only lang == "sa" text is transliterated."""
 
@@ -85,18 +116,13 @@ class Block(_JsonModel):
     align: Align = "left"
     bbox: list[float] | None = None
     flags: list[str] = Field(default_factory=list)
+    # Text labels drawn inside an image block; left out of the JSON when absent so older files stay as they are.
+    labels: list[Label] | None = Field(default=None, exclude_if=lambda v: v is None)
 
     @field_validator("bbox")
     @classmethod
     def _check_bbox(cls, v: list[float] | None) -> list[float] | None:
-        if v is None:
-            return v
-        if len(v) != 4:
-            raise ValueError("bbox must be [x0, y0, x1, y1]")
-        x0, y0, x1, y1 = v
-        if not all(0.0 <= c <= 1.0 for c in v) or x0 > x1 or y0 > y1:
-            raise ValueError(f"bbox must be normalized 0-1 with x0<=x1, y0<=y1: {v}")
-        return v
+        return _check_bbox_value(v)
 
     @model_validator(mode="after")
     def _check_shape(self) -> Block:
@@ -106,6 +132,14 @@ class Block(_JsonModel):
             raise ValueError(f"only table blocks may have rows ({self.id} is {self.type})")
         if self.type == "image" and self.bbox is None:
             raise ValueError(f"image block {self.id} needs a bbox")
+        if self.labels is not None:
+            if self.type != "image":
+                raise ValueError(f"only image blocks may have labels ({self.id} is {self.type})")
+            x0, y0, x1, y1 = self.bbox
+            for lab in self.labels:
+                lx0, ly0, lx1, ly1 = lab.bbox
+                if lx0 < x0 or ly0 < y0 or lx1 > x1 or ly1 > y1:
+                    raise ValueError(f"label {lab.text!r} bbox {lab.bbox} lies outside image block {self.id} bbox {self.bbox}")
         return self
 
     @property
@@ -221,15 +255,26 @@ class Master(_JsonModel):
 
 class Correction(_JsonModel):
     """One hand edit to master.json: replace lines and/or rows of a block, set its flags, or fix its
-    heading level or alignment. Fields left out stay as they are."""
+    heading level or alignment. Fields left out stay as they are.
+
+    Setting type "image" turns the block into a drawing: its lines and rows are cleared, and it keeps its
+    bbox unless one is given. labels sets the text labels drawn inside an image block."""
 
     page: int
     block_id: str
+    type: BlockType | None = None
+    bbox: list[float] | None = None
+    labels: list[Label] | None = None
     lines: list[str] | None = None
     rows: list[list[str]] | None = None
     flags: list[str] | None = None
     level: int | None = None
     align: Align | None = None
+
+    @field_validator("bbox")
+    @classmethod
+    def _check_bbox(cls, v: list[float] | None) -> list[float] | None:
+        return _check_bbox_value(v)
 
 
 def load_json(path: Path) -> object:

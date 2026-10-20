@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
+import math
 import re
 from itertools import pairwise
 from pathlib import Path
 
-from ..schema import Block, Master, Page
+from ..schema import Block, Label, Master, Page
 from .fonts import font_chain, lang_font, script_font
 from .svarafont import derived_family, has_derived
 
@@ -29,8 +30,9 @@ STYLE = {
     "margin_right": 79.2,
     "margin_top": 80,
     "margin_bottom": 76,
-    # Every printed line stays one output line: a block too wide for the page is set smaller, down to this.
-    "min_size": 12.0,  # pt
+    # Blocks are never set smaller than the body size: a printed line too wide for the page wraps with a
+    # hanging indent instead, so the whole book reads at one size.
+    "min_size": 16.74,  # pt
 }
 STYLE_SIDE_BY_SIDE = {**STYLE, "size": 11.5, "min_size": 8.25, "margin_left": 54, "margin_right": 54}
 
@@ -38,6 +40,29 @@ STYLE_SIDE_BY_SIDE = {**STYLE, "size": 11.5, "min_size": 8.25, "margin_left": 54
 SVARA_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3]")
 
 BODY_EXCLUDED = ("running_header", "page_number")
+
+# A verse number closing a line ("... word ॥ १२॥"), in any Indic or Latin digits, with the word before it.
+VERSE_END_RE = re.compile(r"\S+\s+(?:[।॥]\s*)*[0-9०-९೦-೯౦-౯௦-௯]+\s*[।॥]+\s*$")
+WORD_JOINER = "\u2060"
+
+
+def keep_verse_number(line: str) -> str:
+    """Glue a closing verse number to the word before it, so a wrapped line never leaves "॥ १२॥" alone.
+
+    Spaces in that tail become no-break spaces and a word joiner follows each danda (UAX 14 allows a break
+    after a danda even without a space).
+    """
+    m = VERSE_END_RE.search(line)
+    if not m:
+        return line
+    tail = re.sub(r"\s", " ", m.group(0).rstrip())
+    tail = re.sub(r"([।॥])(?=.)", r"\1" + WORD_JOINER, tail)
+    return line[: m.start()] + tail
+
+# Scan pixels painted white around a drawing's label beyond its bbox, so anti-aliased glyph edges go too.
+LABEL_PAD = 3
+# Gray level below which a scan pixel counts as ink, when telling the drawing's strokes from the label's glyphs.
+LABEL_INK = 200
 
 # A cell that is only a page reference: "12", "10-11", "xiii", or empty.
 PAGE_REF_RE = re.compile(r"^\s*(?:\d+(?:\s*[-–]\s*\d+)?|[ivxlcIVXLC]+)?\s*$")  # \d: digits of any script
@@ -156,8 +181,13 @@ def find_page_image(work_dir: Path, page: Page) -> Path | None:
     return next((c for c in candidates if c.is_file()), None)
 
 
-def crop_image(src: Path, bbox: list[float], dest: Path) -> tuple[int, int]:
-    """Crop normalized bbox [x0, y0, x1, y1] out of src into dest (PNG); returns the crop size."""
+def crop_image(src: Path, bbox: list[float], dest: Path, blank: list[list[float]] = ()) -> tuple[int, int]:
+    """Crop normalized bbox [x0, y0, x1, y1] out of src into dest (PNG); returns the crop size.
+
+    Each normalized page bbox in `blank` (a label's printed text) is painted white first, grown by
+    LABEL_PAD pixels so no edge of the old glyphs remains, and never more than that; drawing strokes that
+    pass through that padding are kept (see _whiten_label).
+    """
     from PIL import Image
 
     with Image.open(src) as im:
@@ -167,12 +197,97 @@ def crop_image(src: Path, bbox: list[float], dest: Path) -> tuple[int, int]:
         crop = im.crop(box)
         if crop.mode not in ("RGB", "L", "RGBA", "LA"):
             crop = crop.convert("RGB")
+        if blank:
+            for lx0, ly0, lx1, ly1 in blank:
+                # Pixel edges of the label's ink, outward-rounded, in crop pixels.
+                ink = (math.floor(lx0 * w) - box[0], math.floor(ly0 * h) - box[1],
+                       math.ceil(lx1 * w) - box[0], math.ceil(ly1 * h) - box[1])
+                _whiten_label(crop, ink)
         dest.parent.mkdir(parents=True, exist_ok=True)
         crop.save(dest)
         return crop.size
 
 
-def _font(block: Block, script: str) -> dict:
+def _whiten_label(crop, ink: tuple[int, int, int, int]) -> None:
+    """Paint a label's ink box white, plus a LABEL_PAD ring around it for the glyphs' anti-aliased edges.
+
+    Ink in the ring that runs on beyond the ring (a stroke or grid line of the drawing passing close to the
+    label) is part of the drawing, not the label, and is kept.
+    """
+    import cv2
+    import numpy as np
+    from PIL import Image, ImageDraw
+
+    cw, ch = crop.size
+    ix0, iy0, ix1, iy1 = ink
+    px0, py0, px1, py1 = ix0 - LABEL_PAD, iy0 - LABEL_PAD, ix1 + LABEL_PAD, iy1 + LABEL_PAD
+    # The padded box and a one-pixel frame outside it, clipped to the crop.
+    ex0, ey0, ex1, ey1 = max(px0 - 1, 0), max(py0 - 1, 0), min(px1 + 1, cw), min(py1 + 1, ch)
+    if ex0 >= ex1 or ey0 >= ey1:
+        return
+    region = np.asarray(crop.crop((ex0, ey0, ex1, ey1)).convert("L"))
+    dark = (region < LABEL_INK).astype(np.uint8)
+    dark[max(iy0 - ey0, 0):max(iy1 - ey0, 0), max(ix0 - ex0, 0):max(ix1 - ex0, 0)] = 0  # the label itself goes
+    ys, xs = np.mgrid[ey0:ey1, ex0:ex1]
+    outside = (xs < px0) | (xs >= px1) | (ys < py0) | (ys >= py1)
+    _, comp = cv2.connectedComponents(dark, connectivity=8)
+    drawing = np.isin(comp, np.unique(comp[outside & (dark > 0)])) & (dark > 0)
+    keep = Image.fromarray((drawing * 255).astype(np.uint8))
+    original = crop.crop((ex0, ey0, ex1, ey1))
+    ImageDraw.Draw(crop).rectangle((px0, py0, px1 - 1, py1 - 1), fill="white")
+    crop.paste(original, (ex0, ey0), keep)
+
+
+def label_rooms(crop_png: Path, bbox: list[float], label_bboxes: list[list[float]]) -> list[tuple[float, float, float, float]]:
+    """How far each label may grow beyond its printed box: (left, top, right, bottom) as fractions of the image.
+
+    Each label's box is grown a pixel at a time on every side while the grown box stays clear of the
+    drawing's ink in the whitened crop and of the boxes already given to other labels, by at most the
+    label's own width sideways and its own height up or down; a small margin is then kept from that ink.
+    A script wider or taller than the printed one is then not shrunk to fit a box sized for its glyphs.
+    """
+    import numpy as np
+    from PIL import Image
+
+    with Image.open(crop_png) as im:
+        cw, ch = im.size
+        blocked = np.asarray(im.convert("L")) < LABEL_INK
+    x0, y0, x1, y1 = bbox
+    w, h = max(x1 - x0, 1e-9), max(y1 - y0, 1e-9)
+    boxes = []
+    for lx0, ly0, lx1, ly1 in label_bboxes:
+        ix0, ix1 = max(int((lx0 - x0) / w * cw), 0), min(int(math.ceil((lx1 - x0) / w * cw)), cw)
+        iy0, iy1 = max(int((ly0 - y0) / h * ch), 0), min(int(math.ceil((ly1 - y0) / h * ch)), ch)
+        boxes.append((ix0, iy0, max(ix1, ix0 + 1), max(iy1, iy0 + 1)))
+    for bx in boxes:  # every printed label is reserved for its own label
+        blocked[bx[1]:bx[3], bx[0]:bx[2]] = True
+    out = []
+    for i, (ix0, iy0, ix1, iy1) in enumerate(boxes):
+        blocked[iy0:iy1, ix0:ix1] = False
+        lw, lh = ix1 - ix0, iy1 - iy0
+        margin = max(LABEL_PAD * 2, lh // 4)
+        caps = (lw + margin, lh + margin, lw + margin, lh + margin)
+        g = [0, 0, 0, 0]  # left, top, right, bottom
+        grown = True
+        while grown:
+            grown = False
+            for side in range(4):
+                if g[side] >= caps[side]:
+                    continue
+                a0, b0, a1, b1 = ix0 - g[0], iy0 - g[1], ix1 + g[2], iy1 + g[3]
+                strip = {0: (a0 - 1, b0, a0, b1), 1: (a0, b0 - 1, a1, b0), 2: (a1, b0, a1 + 1, b1), 3: (a0, b1, a1, b1 + 1)}[side]
+                sx0, sy0, sx1, sy1 = strip
+                if sx0 < 0 or sy0 < 0 or sx1 > cw or sy1 > ch or blocked[sy0:sy1, sx0:sx1].any():
+                    continue
+                g[side] += 1
+                grown = True
+        g = [max(0, v - margin) for v in g]
+        # The grown box is now taken: later labels may not grow into it.
+        blocked[iy0 - g[1]:iy1 + g[3], ix0 - g[0]:ix1 + g[2]] = True
+        out.append((g[0] / cw, g[1] / ch, g[2] / cw, g[3] / ch))
+    return out
+
+def _font(block: Block | Label, script: str) -> dict:
     sf = script_font(script) if block.is_sanskrit else lang_font(block.lang)
     return {"font": family_chain(sf.family), "lang": sf.lang, "scale": sf.scale}
 
@@ -183,13 +298,28 @@ def family_chain(family: str) -> list[str]:
     return [derived_family(family), *chain] if has_derived(family) else chain
 
 
+def _label_data(
+    label: Label, bbox: list[float], script: str, grow: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+) -> dict:
+    """A label's text and font, and its box as fractions of the image block it sits in.
+
+    `grow` (left, top, right, bottom fractions of the image, see label_rooms) widens the box into free space.
+    """
+    gl, gt, gr, gb = grow
+    x0, y0, x1, y1 = bbox
+    w, h = max(x1 - x0, 1e-9), max(y1 - y0, 1e-9)
+    lx0, ly0, lx1, ly1 = label.bbox
+    box = {"x": (lx0 - x0) / w - gl, "y": (ly0 - y0) / h - gt, "w": (lx1 - lx0) / w + gl + gr, "h": (ly1 - ly0) / h + gt + gb}
+    return {"text": label.text, **{k: round(v, 5) for k, v in box.items()}, **_font(label, script)}
+
+
 def _block_data(
     block: Block, orig: Block | None, page: Page, script: str, side_by_side: bool, work_dir: Path, build_dir: Path,
     index: int,
 ) -> dict:
     d: dict = {"id": block.id, "type": block.type, "align": block.align, "level": block.level or 1, **_font(block, script)}
     d["tight_above"] = d["tight_below"] = False
-    d["lines"] = block.lines
+    d["lines"] = [keep_verse_number(line) for line in block.lines]
     d["rows"] = block.rows or []
     d["vedic"] = any(SVARA_RE.search(t) for t in [*block.lines, *(c for r in d["rows"] for c in r)])
     if block.type == "table":
@@ -205,17 +335,22 @@ def _block_data(
         if d["orig"]:
             d["orig"]["segs"] = [blank_segments(line) for line in orig.lines]
     elif block.type == "list_item":
-        d["marker"], d["lines"] = split_marker(block.lines)
+        d["marker"], d["lines"] = split_marker(d["lines"])
         if d["orig"]:
             d["orig"]["marker"], d["orig"]["lines"] = split_marker(orig.lines)
     elif block.type == "image":
         d["image"] = None
+        d["labels"] = []
         src = find_page_image(work_dir, page)
+        labels = block.labels or []
         if src is not None and block.bbox is not None:
             # Named by position, not id: ids like "a/b" and "a?b" would sanitize to the same file.
             rel = Path("img") / f"p{page.page:04d}-{index:03d}.png"
-            crop_image(src, block.bbox, build_dir / rel)
+            cw, ch = crop_image(src, block.bbox, build_dir / rel, blank=[lab.bbox for lab in labels])
             d["image"] = rel.as_posix()
+            d["aspect"] = ch / cw
+            rooms = label_rooms(build_dir / rel, block.bbox, [lab.bbox for lab in labels])
+            d["labels"] = [_label_data(lab, block.bbox, script, room) for lab, room in zip(labels, rooms)]
         x0, _, x1, _ = block.bbox or (0.0, 0.0, 1.0, 1.0)
         # The text block of a scan is ~75% of the page width; scale crops to the same share of ours.
         d["width"] = round(min(1.0, max(0.15, (x1 - x0) / 0.75)), 3)
