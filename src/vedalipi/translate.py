@@ -27,7 +27,7 @@ from .schema import (
 )
 
 # Part of every page key: bump when the prompt or the payload format changes so pages are re-translated.
-TRANSLATE_PROMPT_VERSION = "t3"
+TRANSLATE_PROMPT_VERSION = "t4"
 
 GLOSS_MODES = ("none", "key", "all")
 
@@ -40,6 +40,7 @@ INPUT: a JSON object with "blocks": each has "id", "type" (heading, prose, verse
 
 RULES
 - Translate faithfully and completely. Never summarize, skip, soften or add content. Keep every instruction exact: which hand, how much water, how many times, facing which direction.
+- Every word you write (lines, cues, glosses, labels) is "{to}", except Sanskrit quoted as described below. When the source language is close to "{to}" or shares its vocabulary (e.g. Telugu and Kannada), still TRANSLATE: never just rewrite source-language words in the letters of "{to}".
 - Non-Sanskrit blocks: translate into natural, clear "{to}". You may re-break lines: give one entry in "lines" per sentence or natural phrase. A sentence cut off at the end of the page stays cut off.
 - Sanskrit blocks (lang "sa"): give the MEANING of the mantra in natural "{to}", as one or a few sentences, in "lines". Do not transliterate it; the Sanskrit itself is printed separately. Follow the traditional commentary of the tradition named under BOOK CONTEXT; when it names none, follow the standard traditional (e.g. Sayana) reading. A bare list of divine names (e.g. "केशवाय नमः") becomes one salutation per name and line, in "{to}".
 - CUE: every Sanskrit block also gets "cue": ONE short line in "{to}" that is printed just before the mantra and tells the reader what to do while reciting it (the action, the hand, the water, the direction, how many times), ending with a colon. Take it only from the book's own instructions around the mantra on this page or in context_before, whether they come before or after it. Never invent a ritual action the book does not give; when the book gives none, write a plain cue such as "Recite:" in "{to}". Keep it under about twelve words.
