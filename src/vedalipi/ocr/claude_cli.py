@@ -41,18 +41,13 @@ class ClaudeCliBackend(BandedLlmBackend):
         ]
 
     @staticmethod
-    def message(image_png: Path, prompt: str) -> str:
-        data = base64.standard_b64encode(Path(image_png).read_bytes()).decode("ascii")
-        msg = {
-            "type": "user",
-            "message": {
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": data}},
-                    {"type": "text", "text": prompt},
-                ],
-            },
-        }
+    def message(image_png: Path | None, prompt: str) -> str:
+        content: list[dict] = []
+        if image_png is not None:
+            data = base64.standard_b64encode(Path(image_png).read_bytes()).decode("ascii")
+            content.append({"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": data}})
+        content.append({"type": "text", "text": prompt})
+        msg = {"type": "user", "message": {"role": "user", "content": content}}
         return json.dumps(msg, ensure_ascii=False) + "\n"
 
     @staticmethod
@@ -80,12 +75,22 @@ class ClaudeCliBackend(BandedLlmBackend):
         return Answer(text=text, cost_usd=cost)
 
     def _ask(self, image_png: Path, system: str, prompt: str) -> Answer:
+        return self._call(image_png, system, prompt, cwd=Path(image_png).parent)
+
+    def ask_text(self, system: str, prompt: str) -> Answer:
+        """One text-only call (no image) under `system`; used by the translate stage."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory(prefix="vedalipi-text-") as tmp:
+            return self._call(None, system, prompt, cwd=Path(tmp))
+
+    def _call(self, image_png: Path | None, system: str, prompt: str, *, cwd: Path) -> Answer:
         # Drop any API key so the CLI bills the logged-in subscription, as intended.
         env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
         try:
             proc = subprocess.run(
                 self.command(system), input=self.message(image_png, prompt), capture_output=True,
-                text=True, encoding="utf-8", timeout=self.timeout, env=env, cwd=Path(image_png).parent,
+                text=True, encoding="utf-8", timeout=self.timeout, env=env, cwd=cwd,
             )
         except subprocess.TimeoutExpired as e:
             raise OcrCallError(f"claude CLI timed out after {self.timeout:.0f}s") from e

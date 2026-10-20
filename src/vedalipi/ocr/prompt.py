@@ -1,7 +1,9 @@
-# ABOUTME: Shared OCR prompt for the LLM backends: exact-copy rules, Vedic svara codepoints and the block JSON contract.
-# ABOUTME: PROMPT_VERSION goes into every backend fingerprint, so editing the prompt invalidates cached OCR.
+# ABOUTME: OCR prompts for the LLM backends: exact-copy rules, Vedic svara codepoints and the block JSON contract.
+# ABOUTME: Tuned Devanagari prompt plus a template for any other script and language mix; PROMPT_VERSION is in every fingerprint.
 
 from __future__ import annotations
+
+from pathlib import Path
 
 PROMPT_VERSION = "v3"
 
@@ -57,6 +59,61 @@ OUTPUT
 Return ONLY one JSON object, no prose, no markdown fences:
 {"blocks": [{"type": "...", "lang": "...", "lines": ["..."], "align": "left", "bbox": [0,0,1,1], "flags": []}, ...]}
 """
+
+# Books printed in any other script use one template: script name, the languages printed in the book and
+# optional per-script glyph notes (ocr/scripts/<script>.txt) are filled in. Layout, field, band and output rules
+# are the Devanagari prompt's own.
+SCRIPT_NOTES_DIR = Path(__file__).with_name("scripts")
+
+_TEMPLATE = """You are a meticulous OCR engine for scanned books printed in {script} script, often Vedic or devotional books where Sanskrit mantras sit among text in other languages. You transcribe; you never edit.
+
+ABSOLUTE RULE: copy exactly what is printed, glyph by glyph, in {script} SCRIPT. Never convert to another script, never translate, never correct, complete, modernize or "fix" text from memory, even when you recognize the mantra and the print looks wrong. Printed spelling, spacing, punctuation and accent placement win over what you think the text should be. If a glyph is unclear, write your best reading of the printed glyph and add the flag "low_confidence" to that block.
+Well-known mantras are the biggest risk: read each akshara, each conjunct member and each accent mark off the image, one at a time, and write only what is there. A misprint stays a misprint.
+
+LANGUAGES
+This book prints these languages (ISO 639-1 codes): {languages}. Give every block the "lang" of its text.
+- "sa" is Sanskrit to be recited: mantras, shlokas, sankalpa formulas, lists of divine names, even though it is printed in {script} letters.
+- Every other language is ordinary text: instructions, explanations, notes, headings in that language.
+- Keep languages in separate blocks. When a printed line starts in one language and another begins mid-line (e.g. an instruction followed by the mantra it introduces), split that line at the boundary into two blocks of the right "lang", in reading order.
+- A short mantra or name quoted inside a sentence of another language stays inside that sentence's block; do not cut a sentence apart.
+- A sankalpa with fill-in blanks is "sa".
+
+VEDIC MARKS (Sanskrit only)
+- Accents use the same Unicode marks in every Indic script, written after the {script} akshara they sit on: vertical stroke ABOVE an akshara (svarita) U+0951 "॑"; horizontal bar BELOW (anudatta) U+0952 "॒"; two vertical strokes above (double svarita) U+1CDA "᳚".
+- Put each accent mark right after the akshara it sits on, after its vowel sign and after any anusvara/visarga/candrabindu.
+- Which akshara carries a mark: the one directly under the stroke or directly over the bar, decided by the centre of the mark, never by where the mantra "should" be accented. If one mark visibly spans two aksharas, write it once after the akshara under or over its centre and add the flag "ambiguous_svara_span".
+- An akshara can carry both a bar below and a stroke above: write ॒ then ॑. Every printed stroke/bar gets exactly one mark; no stroke, no mark. Text in other languages has no accents.
+- The Vedic "gm" anusvara: if the book prints a special sign (like a small ३ or "ꣳ") write U+A8F3 "ꣳ"; if it prints ga + virama + anusvara, write exactly that.
+- Danda "।", double danda "॥" (never "|" or "||").
+- Digits: keep the digit system as printed.
+- Dotted fill-in blanks (a run of dots or a dotted line meant to be filled in): write a run of ASCII periods "........" (about as many dots as printed, at least 4). Keep the words around it.
+{notes}
+"""
+
+
+def script_notes(script: str) -> str:
+    """Glyph notes for one script from ocr/scripts/<script>.txt, or "" when there are none."""
+    path = SCRIPT_NOTES_DIR / f"{script}.txt"
+    return path.read_text(encoding="utf-8").strip() if path.exists() else ""
+
+
+def system_prompt(script: str = "devanagari", languages: tuple[str, ...] = ()) -> str:
+    """The OCR system prompt for a book printed in `script` with text in `languages` (ISO 639-1 codes).
+
+    A Devanagari book with no language list gets the tuned Devanagari prompt unchanged.
+    """
+    if script == "devanagari" and not languages:
+        return SYSTEM_PROMPT
+    notes = script_notes(script)
+    head = _TEMPLATE.format(
+        script=script.capitalize(),
+        languages=", ".join(languages or ("sa",)),
+        notes=f"\n{script.upper()} GLYPHS\n{notes}\n" if notes else "",
+    )
+    return head + "\n" + SYSTEM_PROMPT[SYSTEM_PROMPT.index("LAYOUT → BLOCKS"):].replace(
+        '"lang": "sa" for Sanskrit/Devanagari text, "en" for English, "ta" for Tamil, other ISO 639-1 codes as needed.',
+        '"lang": the ISO 639-1 code of the block\'s language, as described under LANGUAGES.',
+    )
 
 
 def user_prompt(page: int, band: int, bands: int, y0: float, y1: float) -> str:

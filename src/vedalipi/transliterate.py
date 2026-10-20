@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from functools import lru_cache
 
 from .normalize import normalize_text
-from .schema import FLAG_ROUNDTRIP_FAIL, Block, Master
+from .schema import FLAG_ROUNDTRIP_FAIL, Block, Master, Page
 
 # U+A8F3 (Vedic candrabindu-virama) replacement per target script; Noto lacks the glyph.
 A8F3 = "ꣳ"
@@ -16,6 +17,36 @@ DEFAULT_A8F3 = {"kannada": "ಗ್ಂ", "telugu": "గ్ం"}
 
 # Devanagari is the master language; every conversion starts from it.
 DEVA = "devanagari"
+
+# Roman schemes (iast, iso15919, ...) have no svara letters of their own, and Latin fonts lack the Devanagari
+# marks: each Vedic mark becomes the Latin combining mark that looks like it. vidyut writes svarita as U+032D.
+ROMAN_SVARA = {
+    "\u0951": "\u030d",  # svarita: vertical line above
+    "\u032d": "\u030d",
+    "\u0952": "\u0331",  # anudatta: macron below
+    "\u1cda": "\u030e",  # double svarita: double vertical line above
+}
+_ROMAN_BACK = {"\u030d": "\u0951", "\u032d": "\u0951", "\u0331": "\u0952", "\u030e": "\u1cda"}
+
+
+def _roman_marks(text: str, table: dict[str, str]) -> str:
+    """Swap accent marks in roman text. Decomposed first: vidyut can fuse a vowel and its svarita into one
+    precomposed letter (u + U+032D -> ṷ), which a plain character swap would miss. Each swapped mark is
+    moved after the letter's own marks (the macron of ā, the dot of ṛ), so the letter recomposes and the
+    accent sits outside it: ā + svarita, never a + svarita + macron."""
+    out: list[str] = []
+    accents: list[str] = []
+    for ch in unicodedata.normalize("NFD", text):
+        if ch in table:
+            accents.append(table[ch])
+        elif unicodedata.combining(ch):
+            out.append(ch)
+        else:
+            out.extend(accents)
+            accents.clear()
+            out.append(ch)
+    out.extend(accents)
+    return unicodedata.normalize("NFC", "".join(out))
 
 
 @lru_cache(maxsize=1)
@@ -71,8 +102,21 @@ def _render_line(text: str, script: str, a8f3: str | None) -> tuple[str, str]:
     Round trips are checked against the raw form so the deliberate U+A8F3 substitution is not
     mistaken for a lossy conversion.
     """
+    if is_roman(script):
+        # vidyut writes dandas as "." and "..", which run into fill-in dots; roman books print | and ||.
+        text = text.replace("॥", "||").replace("।", "|")
     raw = _convert(text, DEVA, script)
-    return raw, (raw.replace(A8F3, a8f3) if a8f3 is not None else raw)
+    out = raw.replace(A8F3, a8f3) if a8f3 is not None else raw
+    if is_roman(script):
+        out = _roman_marks(out, ROMAN_SVARA)
+    return raw, out
+
+
+@lru_cache(maxsize=None)
+def is_roman(script: str) -> bool:
+    """True when `script` writes Sanskrit in Latin letters (iast, iso15919, harvardkyoto, ...)."""
+    sample = _convert("कृष्ण", DEVA, script)
+    return all(ord(ch) < 0x0370 or 0x1E00 <= ord(ch) <= 0x1EFF for ch in sample)
 
 
 def transliterate_text(text: str, script: str, *, a8f3: str | None = None) -> str:
@@ -84,14 +128,40 @@ def transliterate_text(text: str, script: str, *, a8f3: str | None = None) -> st
     return out
 
 
-def _roundtrip_key(text: str) -> str:
+def page_to_devanagari(page: Page, script: str) -> Page:
+    """Return a copy of an OCR'd page from a `script` book with its Sanskrit (lines, cells, labels) in Devanagari.
+
+    Text in other languages (e.g. Telugu instructions) keeps its own script. Svara marks pass through unchanged.
+    """
+    out = page.model_copy(deep=True)
+    for block in out.blocks:
+        if block.is_sanskrit:
+            block.lines = [_convert(line, script, DEVA) for line in block.lines]
+            if block.rows is not None:
+                block.rows = [[_convert(c, script, DEVA) for c in row] for row in block.rows]
+        for label in block.labels or []:
+            if label.is_sanskrit:
+                label.text = _convert(label.text, script, DEVA)
+    return out
+
+
+def _roundtrip_key(text: str, script: str = DEVA) -> str:
     # The one sanctioned equivalence: targets without an om sign write ॐ as ओं (ಓಂ, ఓం), which reads back as ओं.
-    return normalize_text(text).replace("ॐ", "ओं")
+    key = normalize_text(text).replace("ॐ", "ओं")
+    # Roman schemes write the Vedic anusvara ꣳ as m̐, which reads back as candrabindu.
+    return key.replace(A8F3, "ँ") if is_roman(script) else key
 
 
 def roundtrip_back(converted: str, script: str) -> str:
-    """`converted` read back into Devanagari."""
-    return _convert(converted, script, DEVA)
+    """`converted` read back into Devanagari (a roman display form's Latin svara marks read as Vedic marks)."""
+    if not is_roman(script):
+        return _convert(converted, script, DEVA)
+    # Roman text: | and || are the dandas, and dots are fill-in blanks that vidyut would read as dandas.
+    # Typographic quotes are quotes: vidyut writes the avagraha as ASCII "'", but reads ’ as one too.
+    keep = {".": "\u2024", "\u2018": "\ue000", "\u2019": "\ue001"}
+    converted = _roman_marks(converted, _ROMAN_BACK).translate(str.maketrans(keep))
+    back = _convert(converted, script, DEVA).translate(str.maketrans({v: k for k, v in keep.items()}))
+    return back.replace("||", "॥").replace("|", "।")
 
 
 def roundtrip_ok(devanagari: str, converted: str, script: str) -> bool:
@@ -100,7 +170,7 @@ def roundtrip_ok(devanagari: str, converted: str, script: str) -> bool:
     The comparison is in Devanagari, never after a second forward conversion: a character the forward
     conversion drops would vanish from both sides of such a comparison and go unnoticed.
     """
-    return _roundtrip_key(devanagari) == _roundtrip_key(roundtrip_back(converted, script))
+    return _roundtrip_key(devanagari, script) == _roundtrip_key(roundtrip_back(converted, script), script)
 
 
 def _convert_line(text: str, script: str, a8f3: str | None) -> tuple[str, bool, str]:

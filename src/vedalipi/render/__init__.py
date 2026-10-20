@@ -41,6 +41,10 @@ def render_pdf(
     work_dir: Path,
     side_by_side: bool = False,
     fonts_dir: Path = FONTS_DIR,
+    meanings: dict | None = None,
+    meaning_lang: str = "en",
+    translated: bool = False,
+    build_name: str | None = None,
 ) -> None:
     """Render `target` (the transliterated master) to out_pdf.
 
@@ -51,12 +55,15 @@ def render_pdf(
     """
     import typst
 
-    build = build_dir_for(work_dir, script, side_by_side)
+    build = build_dir_for(work_dir, build_name or script, side_by_side)
     if build.exists():
         shutil.rmtree(build)
     build.mkdir(parents=True)
 
-    doc = build_document(master, target, script=script, side_by_side=side_by_side, work_dir=Path(work_dir), build_dir=build)
+    doc = build_document(
+        master, target, script=script, side_by_side=side_by_side, work_dir=Path(work_dir), build_dir=build,
+        meanings=meanings, meaning_lang=meaning_lang, translated=translated,
+    )
     (build / "data.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     (build / "master.json").write_text(master.to_json() + "\n", encoding="utf-8")
     shutil.copyfile(TEMPLATE, build / "main.typ")

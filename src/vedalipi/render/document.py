@@ -8,7 +8,7 @@ import re
 from itertools import pairwise
 from pathlib import Path
 
-from ..schema import Block, Label, Master, Page
+from ..schema import Block, BlockTranslation, Label, Master, Page
 from .fonts import font_chain, lang_font, script_font
 from .svarafont import derived_family, has_derived
 
@@ -35,9 +35,12 @@ STYLE = {
     "min_size": 16.74,  # pt
 }
 STYLE_SIDE_BY_SIDE = {**STYLE, "size": 11.5, "min_size": 8.25, "margin_left": 54, "margin_right": 54}
+# A translated edition reads like a book in its own language: body size of a printed English manual, and
+# romanized mantra lines (longer than their Indic originals) may shrink a little before they wrap.
+STYLE_TRANSLATED = {**STYLE, "size": 13, "min_size": 11}
 
 # Vedic accents and their stand-ins: a block carrying any of them gets the wider Vedic line pitch.
-SVARA_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3]")
+SVARA_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3\u030D\u030E\u0331]")  # last three: roman svaras
 
 BODY_EXCLUDED = ("running_header", "page_number")
 
@@ -315,7 +318,7 @@ def _label_data(
 
 def _block_data(
     block: Block, orig: Block | None, page: Page, script: str, side_by_side: bool, work_dir: Path, build_dir: Path,
-    index: int,
+    index: int, meaning: BlockTranslation | None = None, meaning_lang: str = "en", translated: bool = False,
 ) -> dict:
     d: dict = {"id": block.id, "type": block.type, "align": block.align, "level": block.level or 1, **_font(block, script)}
     d["tight_above"] = d["tight_below"] = False
@@ -329,6 +332,15 @@ def _block_data(
     d["orig"] = None
     if show_orig:
         d["orig"] = {"lines": orig.lines, "rows": orig.rows or [], **_font(orig, "devanagari")}
+
+    # In a translated edition, text in the translation's language is new prose: it reflows freely.
+    d["reflow"] = translated and not block.is_sanskrit
+    # A Sanskrit block of a translated edition carries its meaning (and word gloss), set under the text.
+    d["meaning"] = None
+    if meaning is not None and (meaning.lines or meaning.gloss):
+        lf = lang_font(meaning_lang)
+        d["meaning"] = {"lines": meaning.lines, "gloss": meaning.gloss or [],
+                        "font": family_chain(lf.family), "lang": lf.lang, "scale": lf.scale}
 
     if block.type == "fill_blank":
         d["segs"] = [blank_segments(line) for line in block.lines]
@@ -367,9 +379,14 @@ def _printed_number(page: Page) -> str | None:
 
 
 def build_document(
-    master: Master, target: Master, *, script: str, side_by_side: bool, work_dir: Path, build_dir: Path
+    master: Master, target: Master, *, script: str, side_by_side: bool, work_dir: Path, build_dir: Path,
+    meanings: dict[tuple[int, str], BlockTranslation] | None = None, meaning_lang: str = "en", translated: bool = False,
 ) -> dict:
-    """The full data tree handed to book.typ as data.json."""
+    """The full data tree handed to book.typ as data.json.
+
+    `translated` marks a translated edition; `meanings` maps (page, block id) of its Sanskrit blocks to
+    their translation."""
+    meanings = meanings or {}
     main = script_font(script)
     pages = []
     for page in target.pages:
@@ -392,7 +409,8 @@ def build_document(
         except KeyError:
             orig_blocks = {}
         blocks = [
-            _block_data(b, orig_blocks.get(b.id), page, script, side_by_side, work_dir, build_dir, i)
+            _block_data(b, orig_blocks.get(b.id), page, script, side_by_side, work_dir, build_dir, i,
+                        meanings.get((page.page, b.id)), meaning_lang, translated)
             for i, b in enumerate(merge_contents(body), 1)
         ]
         # Consecutive list items sit closer together, like a printed list.
@@ -406,7 +424,7 @@ def build_document(
         "side_by_side": side_by_side,
         "main": {"font": family_chain(main.family), "lang": main.lang},
         "latin": {"font": font_chain("Noto Serif"), "lang": "en"},
-        "style": STYLE_SIDE_BY_SIDE if side_by_side else STYLE,
+        "style": STYLE_SIDE_BY_SIDE if side_by_side else STYLE_TRANSLATED if translated else STYLE,
         "attachment": "master.json",
         "pages": pages,
     }

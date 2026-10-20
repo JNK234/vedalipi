@@ -277,5 +277,33 @@ class Correction(_JsonModel):
         return _check_bbox_value(v)
 
 
+class BlockTranslation(_JsonModel):
+    """One block in the target language: its lines (or table rows, or label texts), plus an optional
+    word-by-word gloss [[word, meaning], ...] for a Sanskrit block."""
+
+    lines: list[str] = Field(default_factory=list)
+    rows: list[list[str]] | None = None
+    labels: list[str] | None = None
+    gloss: list[list[str]] | None = None
+
+
+class PageTranslation(_JsonModel):
+    """A page's translation. `key` hashes the page text and translate settings it was made from: a page is
+    re-translated only when its key changes, so hand edits to `blocks` survive re-runs."""
+
+    key: str
+    blocks: dict[str, BlockTranslation] = Field(default_factory=dict)
+
+
+class Translation(_JsonModel):
+    """<out>/translation.<lang>.json: the master translated into `lang` (ISO 639-1).
+
+    `mantra_script` is the vidyut scheme Sanskrit is shown in next to its meaning (e.g. "iast")."""
+
+    lang: str
+    mantra_script: str
+    pages: dict[int, PageTranslation] = Field(default_factory=dict)
+
+
 def load_json(path: Path) -> object:
     return json.loads(Path(path).read_text(encoding="utf-8"))

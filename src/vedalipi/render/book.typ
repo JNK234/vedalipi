@@ -145,6 +145,9 @@
   let f = (font: src.font, lang: src.lang, scale: src.at("scale", default: 1.0))
   if b.type == "heading" {
     styled(f, text(size: heading-size(b.level), join-lines(src.lines)))
+  } else if b.type == "prose" and b.at("reflow", default: false) {
+    // Translated prose has no printed line breaks to keep: it flows as one justified paragraph.
+    styled(f, par(justify: true, src.lines.join(" ")))
   } else if b.type == "verse" or b.type == "prose" {
     printed-lines(b, f, src.lines, width)
   } else if b.type == "list_item" {
@@ -219,7 +222,8 @@
 #let render-block(b) = context {
   if b.type == "image" { return render-image(b) }
   if b.type == "separator" { return align(center, block(above: 1em, below: 1em, line(length: 28%, stroke: 0.6pt + gray))) }
-  let a = al(b.align)
+  // Reflowed (translated) prose is a paragraph of its own language: set left and justified, not as printed.
+  let a = if b.at("reflow", default: false) and b.type == "prose" { left } else { al(b.align) }
   // Lines of one block sit at the plain pitch, or the wider Vedic pitch when the block carries svaras;
   // blocks (verses) are set apart by an extra verse gap on top of that.
   let lead = (if b.vedic { S.leading_vedic } else { S.leading }) * 1em
@@ -236,7 +240,23 @@
   let whole = b.type == "table" and b.rows.len() <= 10
   // A heading is sticky: it never strands at the foot of a page away from the block it introduces.
   let sticky = b.type == "heading"
-  if b.orig == none {
+  if b.at("meaning", default: none) != none {
+    // A translated edition: the Sanskrit, then its meaning and word gloss, kept together as one unit.
+    let m = b.meaning
+    let mf = (font: m.font, lang: m.lang, scale: m.scale)
+    block(width: 100%, breakable: not whole, ..space, {
+      align(a, body-of(b, target, full))
+      if m.lines.len() > 0 {
+        set par(leading: S.leading * 0.62em, spacing: S.leading * 0.62em)
+        block(above: 0.55em, below: 0pt, inset: (left: 1.2em), text(size: 0.86em, style: "italic", styled(mf, join-lines(m.lines))))
+      }
+      if m.gloss.len() > 0 {
+        set par(leading: S.leading * 0.55em)
+        block(above: 0.5em, below: 0pt, inset: (left: 1.2em), text(size: 0.78em, styled(mf,
+          m.gloss.map(g => [#text(style: "italic", g.at(0)) — #g.at(1)]).join([; ]))))
+      }
+    })
+  } else if b.orig == none {
     block(width: 100%, breakable: not whole, sticky: sticky, ..space, align(a, body-of(b, target, full)))
   } else {
     let o = b.orig

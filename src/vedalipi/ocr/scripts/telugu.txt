@@ -1,0 +1,3 @@
+- The talakattu (the tick ✓ on top of many letters), vowel-sign hooks and the subscript consonant forms (vattulu) below a letter are parts of the letter, never svaras. An accent is a separate short stroke or bar set clear of the letter.
+- Anusvara "ం", visarga "ః", arasunna "ఁ"; accents go after them: దేవాః॑ not దేవా॑ః.
+- Avagraha "ఽ". Telugu digits are ౦-౯.

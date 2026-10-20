@@ -312,11 +312,12 @@ def test_validate_fingerprint_follows_image_content(tmp_path):
     assert pipeline._validate_fingerprint(job) != a
 
 
-def test_normalize_stage_has_a_version_fingerprint():
+def test_normalize_stage_has_a_version_fingerprint(tmp_path):
     stage = next(s for s in pipeline.default_stages("pdf") if s.name == "normalize")
     from vedalipi.normalize import NORMALIZE_VERSION
 
-    assert NORMALIZE_VERSION in stage.fingerprint(None)
+    cfg = make_cfg(tmp_path)
+    assert NORMALIZE_VERSION in stage.fingerprint(PageJob(1, pipeline.page_dir(cfg.work_dir, 1), cfg))
 
 
 def test_output_dir_lock_is_exclusive(tmp_path):

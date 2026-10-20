@@ -107,6 +107,26 @@ Flags:
 - `low_confidence`: the OCR model was unsure.
 - `roundtrip_fail`: the transliteration does not convert back to the same Devanagari. It is reported in `work/transliterate-<script>.json`.
 
+## Books in other scripts
+
+A book printed in another Indic script is read in that script and its Sanskrit becomes the Devanagari master:
+
+```sh
+uv run vedalipi run book.pdf --source-script telugu --languages te,sa --script kannada --out out/book
+```
+
+`--languages` lists the languages printed in the book (ISO 639-1). OCR tags every block with one of them. Sanskrit (`sa`) is converted to Devanagari at normalize; other text keeps its script. The OCR prompt is built from the script name, the languages and optional glyph notes in `src/vedalipi/ocr/scripts/<script>.txt`. Editing a notes file re-reads the affected pages. The image svara count needs Devanagari headlines, so other scripts rely on `--cross-read` for svara checks.
+
+## Translated editions
+
+```sh
+uv run vedalipi translate out/book --to en --mantra-script iast --gloss key \
+    --context "Smarta, Krishna Yajurveda, Apastamba sutra; follow Sayana" --glossary terms.json
+uv run vedalipi render out/book --translation en      # <book>.iast.en.pdf
+```
+
+`translate` sends each master page to the `claude` CLI and writes `translation.<lang>.json`. Text in other languages is translated. Sanskrit keeps its text in `--mantra-script` (any vidyut scheme), with its meaning, and with `--gloss key` or `all` a word-by-word gloss, set under it. `--context` and `--glossary` (a JSON object of fixed renderings) steer the wording. A page is translated again only when its master text or these settings change, so hand edits to `translation.<lang>.json` survive. Cost is recorded in the manifest under `translate-<lang>`. In roman schemes the svaras print as Latin marks: svarita as a line above (a̍), anudatta as a bar below (a̱) and the double svarita as two lines above (a̎); dandas print as | and ||.
+
 ## Adding a script
 
 Every vidyut script name is accepted by `--script`. A script only needs a font: add one line to `SCRIPTS` in `src/vedalipi/render/fonts.py` and put the font file in `fonts/`. Kannada and Telugu replace U+A8F3, which Noto lacks, with ಗ್ಂ and గ్ం (`DEFAULT_A8F3` in `transliterate.py`).

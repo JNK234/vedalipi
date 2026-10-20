@@ -24,6 +24,7 @@ OCR_JSON = "ocr.json"
 OCR2_JSON = "ocr2.json"  # independent second read (--cross-read)
 NORM_JSON = "norm.json"
 FLAGS_JSON = "flags.json"
+DEVA = "devanagari"  # the master's script
 
 
 @dataclass
@@ -43,6 +44,11 @@ class RunConfig:
     upscale: float = 1.5
     side_by_side: bool = False
     cross_read: bool = False  # read every page twice and flag lines the reads disagree on
+    # Script the book is printed in. Its Sanskrit is converted to Devanagari at normalize, so the master
+    # stays Devanagari whatever the source; other-language text keeps its own script.
+    source_script: str = "devanagari"
+    # Languages printed in the book (ISO 639-1); empty means Sanskrit only. Tells OCR how to tag blocks.
+    languages: tuple[str, ...] = ()
 
     @property
     def work_dir(self) -> Path:
@@ -278,12 +284,12 @@ def _crossread(job: PageJob) -> float:
     return result.cost_usd
 
 
-def cross_backend(name: str, model: str | None):
+def cross_backend(name: str, model: str | None, source_script: str = "devanagari", languages: tuple[str, ...] = ()):
     """The second reader: the same backend and prompt, with the page cut into one more band so the two
     reads see different image crops and do not share one band's slip."""
     from .ocr import get_backend
 
-    backend = get_backend(name, model=model)
+    backend = get_backend(name, model=model, source_script=source_script, languages=languages)
     if hasattr(backend, "bands"):
         backend.bands += 1
     return backend
@@ -292,15 +298,22 @@ def cross_backend(name: str, model: str | None):
 def _normalize(job: PageJob) -> None:
     from . import normalize
 
-    normalize.normalize_page(Page.load(job.path(OCR_JSON))).save(job.path(NORM_JSON))
+    page = Page.load(job.path(OCR_JSON))
+    if job.cfg.source_script != DEVA:
+        from . import transliterate
+
+        page = transliterate.page_to_devanagari(page, job.cfg.source_script)
+    normalize.normalize_page(page).save(job.path(NORM_JSON))
 
 
 def _validate(job: PageJob) -> None:
     from . import validate
 
     image, second = job.path(PRE_PNG), job.path(OCR2_JSON)
+    # The image svara count finds Devanagari headlines; other scripts have none to find.
+    use_image = image.exists() and job.cfg.source_script == DEVA
     report = validate.validate_page(
-        Page.load(job.path(NORM_JSON)), image if image.exists() else None, Page.load(second) if second.exists() else None
+        Page.load(job.path(NORM_JSON)), image if use_image else None, Page.load(second) if second.exists() else None
     )
     report.save(job.path(FLAGS_JSON))
 
@@ -310,16 +323,18 @@ def _validate_fingerprint(job: PageJob) -> str:
 
     # The page image and a second read are read too, so their content and the checker version all count.
     image, second = job.path(PRE_PNG), job.path(OCR2_JSON)
+    src = "" if job.cfg.source_script == DEVA else f":src={job.cfg.source_script}"
     return (
         f"v{VALIDATE_VERSION}:image={sha256_file(image) if image.exists() else 'none'}"
-        f":second={sha256_file(second) if second.exists() else 'none'}"
+        f":second={sha256_file(second) if second.exists() else 'none'}{src}"
     )
 
 
 def _normalize_fingerprint(job: PageJob) -> str:
     from .normalize import NORMALIZE_VERSION
 
-    return f"v{NORMALIZE_VERSION}"
+    # Devanagari books keep their original fingerprint; another source script adds its conversion.
+    return f"v{NORMALIZE_VERSION}" + ("" if job.cfg.source_script == DEVA else f":src={job.cfg.source_script}")
 
 
 def default_stages(input_kind: str, *, cross_read: bool = False) -> list[Stage]:
@@ -455,19 +470,27 @@ def diagnostics_path(out_dir: Path, script: str) -> Path:
     return Path(out_dir) / "work" / f"transliterate-{script}.json"
 
 
-def pdf_path(out_dir: Path, master: Master, script: str, *, side_by_side: bool = False) -> Path:
-    """Where render writes the PDF of one script: <out>/<source stem>.<script>[.side-by-side].pdf."""
+def pdf_path(
+    out_dir: Path, master: Master, script: str, *, side_by_side: bool = False, translation: str | None = None
+) -> Path:
+    """Where render writes the PDF of one script: <out>/<source stem>.<script>[.<lang>][.side-by-side].pdf."""
     stem = Path(master.source).stem or "book"
-    return Path(out_dir) / f"{stem}.{script}{'.side-by-side' if side_by_side else ''}.pdf"
+    lang = f".{translation}" if translation else ""
+    return Path(out_dir) / f"{stem}.{script}{lang}{'.side-by-side' if side_by_side else ''}.pdf"
 
 
-def render_from_master(out_dir: Path, script: str, *, side_by_side: bool = False) -> Path:
-    """Transliterate master.json into `script` and render <out>/<stem>.<script>.pdf. Never touches OCR."""
+def render_from_master(
+    out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None
+) -> Path:
+    """Transliterate master.json into `script` and render <out>/<stem>.<script>.pdf. Never touches OCR.
+
+    With `translation` (a language code), the edition of <out>/translation.<lang>.json: other-language text
+    replaced by its translation, Sanskrit in `script` with its meaning under it."""
     with out_lock(out_dir):
-        return _render(Path(out_dir), script, side_by_side=side_by_side)
+        return _render(Path(out_dir), script, side_by_side=side_by_side, translation=translation)
 
 
-def _render(out_dir: Path, script: str, *, side_by_side: bool = False) -> Path:
+def _render(out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None) -> Path:
     import json
 
     from . import transliterate
@@ -476,11 +499,27 @@ def _render(out_dir: Path, script: str, *, side_by_side: bool = False) -> Path:
     master = Master.load(out_dir / "master.json")
     diagnostics: list[dict] = []
     target = transliterate.transliterate_master(master, script, diagnostics=diagnostics)
+    meanings: dict = {}
+    if translation:
+        from . import translate
+        from .schema import Translation
+
+        tpath = translate.translation_path(out_dir, translation)
+        if not tpath.exists():
+            raise FileNotFoundError(f"no {tpath.name}; run `vedalipi translate {out_dir} --to {translation}` first")
+        tr = Translation.load(tpath)
+        target, meanings, missing = translate.apply_translation(target, tr)
+        for p, bid in missing:
+            print(f"[p{p:04d}] {bid}: no translation; printed untranslated", file=sys.stderr)
     atomic_write_text(diagnostics_path(out_dir, script), json.dumps(diagnostics, ensure_ascii=False, indent=1) + "\n")
     for d in diagnostics:
         print(f"[p{d['page']:04d}] {d['block']}: round trip failed: {d['text']!r} -> {d['back']!r}", file=sys.stderr)
-    out_pdf = pdf_path(out_dir, master, script, side_by_side=side_by_side)
-    render_pdf(master, target, out_pdf, script=script, work_dir=out_dir / "work", side_by_side=side_by_side)
+    out_pdf = pdf_path(out_dir, master, script, side_by_side=side_by_side, translation=translation)
+    render_pdf(
+        master, target, out_pdf, script=script, work_dir=out_dir / "work", side_by_side=side_by_side,
+        meanings=meanings, meaning_lang=translation or "en", translated=bool(translation),
+        build_name=f"{script}-{translation}" if translation else None,
+    )
     return out_pdf
 
 
@@ -503,9 +542,11 @@ def _run(cfg: RunConfig) -> tuple[StageRunner, Path | None]:
         from .ocr import get_backend
 
         num_pages = ingest.page_count(cfg.input_path)
-        shared["backend"] = get_backend(cfg.backend, model=cfg.model)
+        shared["backend"] = get_backend(
+            cfg.backend, model=cfg.model, source_script=cfg.source_script, languages=cfg.languages
+        )
         if cfg.cross_read:
-            shared["cross_backend"] = cross_backend(cfg.backend, cfg.model)
+            shared["cross_backend"] = cross_backend(cfg.backend, cfg.model, cfg.source_script, cfg.languages)
 
     manifest = Manifest.load(cfg.manifest_path) if cfg.manifest_path.exists() else None
     if manifest is None or manifest.input_hash != input_hash:

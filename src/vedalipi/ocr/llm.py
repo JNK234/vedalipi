@@ -14,7 +14,9 @@ from ..schema import Page
 from .bands import crop_band, load_gray, plan_bands, stitch
 from .base import OcrBackend, OcrResult
 from .parse import OcrParseError, parse_blocks
-from .prompt import PROMPT_VERSION, SYSTEM_PROMPT, retry_prompt, user_prompt
+import hashlib
+
+from .prompt import PROMPT_VERSION, retry_prompt, system_prompt, user_prompt
 
 
 @dataclass
@@ -75,9 +77,19 @@ class BandedLlmBackend(OcrBackend):
         self.overlap = overlap if overlap is not None else _env_float("VEDALIPI_OCR_OVERLAP", 0.03)
         self.max_width = max_width if max_width is not None else _env_int("VEDALIPI_OCR_MAX_WIDTH", 2400)
         self.retries = retries if retries is not None else _env_int("VEDALIPI_OCR_RETRIES", 2)
+        # Script the book is printed in and the languages it prints; together they pick the system prompt.
+        self.source_script = "devanagari"
+        self.languages: tuple[str, ...] = ()
 
     def fingerprint(self) -> str:
-        return f"{self.name}:{self.model}:prompt-{PROMPT_VERSION}:bands{self.bands}:ov{self.overlap}:w{self.max_width}"
+        fp = f"{self.name}:{self.model}:prompt-{PROMPT_VERSION}:bands{self.bands}:ov{self.overlap}:w{self.max_width}"
+        if self.source_script == "devanagari" and not self.languages:
+            return fp  # the original fingerprint, so cached Devanagari OCR stays valid
+        # A templated prompt changes with its script notes too, so hash the exact text sent.
+        return f"{fp}:src-{self.source_script}:sys-{hashlib.sha256(self.system_prompt().encode()).hexdigest()[:16]}"
+
+    def system_prompt(self) -> str:
+        return system_prompt(self.source_script, self.languages)
 
     @abstractmethod
     def _ask(self, image_png: Path, system: str, prompt: str) -> Answer:
@@ -88,7 +100,7 @@ class BandedLlmBackend(OcrBackend):
         cost, raws, ask = 0.0, [], prompt
         for attempt in range(self.retries + 1):
             try:
-                ans = self._ask(image_png, SYSTEM_PROMPT, ask)
+                ans = self._ask(image_png, self.system_prompt(), ask)
             except Exception as e:
                 raise _carry_cost(e, cost)
             cost += ans.cost_usd

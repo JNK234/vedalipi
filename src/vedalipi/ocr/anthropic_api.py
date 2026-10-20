@@ -19,7 +19,7 @@ from .bands import crop_band, load_gray, plan_bands, stitch
 from .base import OcrResult
 from .llm import Answer, BandedLlmBackend, OcrCallError
 from .parse import OcrParseError, parse_blocks
-from .prompt import SYSTEM_PROMPT, user_prompt
+from .prompt import user_prompt
 
 # USD per million tokens (input, output). Cache writes bill 1.25x input, cache reads 0.1x input.
 PRICES: dict[str, tuple[float, float]] = {
@@ -141,14 +141,14 @@ class AnthropicApiBackend(BandedLlmBackend):
             todo = {cid: v for cid, v in pngs.items() if cid not in done_cids}
             # Submit in chunks so no single batch (or our memory) holds more than ~BATCH_BYTES of images.
             batch_ids, chunk, size = [b["id"] for b in state["batches"]], [], 0
-            overhead = len(SYSTEM_PROMPT.encode()) + 2000
+            overhead = len(self.system_prompt().encode()) + 2000
             last = next(reversed(todo), None)
             for cid, (png, prompt) in todo.items():
                 chunk.append((cid, png, prompt))
                 # base64 image + repeated system prompt + per-request prompt and JSON framing
                 size += png.stat().st_size * 4 // 3 + overhead + len(prompt.encode())
                 if size >= BATCH_BYTES or len(chunk) >= BATCH_REQUESTS or cid == last:
-                    reqs = [{"custom_id": c, "params": self._params(p, SYSTEM_PROMPT, q)} for c, p, q in chunk]
+                    reqs = [{"custom_id": c, "params": self._params(p, self.system_prompt(), q)} for c, p, q in chunk]
                     batch = self.client.messages.batches.create(requests=reqs)
                     print(f"[ocr] batch {batch.id}: {len(reqs)} band requests submitted", file=sys.stderr)
                     batch_ids.append(batch.id)

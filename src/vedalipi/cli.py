@@ -28,6 +28,8 @@ def _cmd_run(a: argparse.Namespace) -> int:
         upscale=a.upscale,
         side_by_side=a.side_by_side,
         cross_read=a.cross_read,
+        source_script=a.source_script,
+        languages=tuple(x.strip() for x in a.languages.split(",") if x.strip()) if a.languages else (),
     )
     runner, pdf = pipeline.run(cfg)
     print(f"stages run: {len(runner.ran)}, cached: {len(runner.skipped)}, failed: {len(runner.failed)}")
@@ -40,8 +42,50 @@ def _cmd_run(a: argparse.Namespace) -> int:
 
 
 def _cmd_render(a: argparse.Namespace) -> int:
-    pdf = pipeline.render_from_master(Path(a.dir).expanduser().resolve(), a.script, side_by_side=a.side_by_side)
+    out_dir = Path(a.dir).expanduser().resolve()
+    script = a.script
+    if script is None:
+        # A translated edition shows Sanskrit in the script it was translated for; otherwise Kannada.
+        script = "kannada"
+        if a.translation:
+            from . import translate
+            from .schema import Translation
+
+            tpath = translate.translation_path(out_dir, a.translation)
+            if tpath.exists():
+                script = Translation.load(tpath).mantra_script
+    pdf = pipeline.render_from_master(out_dir, script, side_by_side=a.side_by_side, translation=a.translation)
     print(f"pdf: {pdf}")
+    return 0
+
+
+def _cmd_translate(a: argparse.Namespace) -> int:
+    from . import translate
+
+    out_dir = Path(a.dir).expanduser().resolve()
+    context = a.context or ""
+    if a.context_file:
+        context = (context + "\n" + Path(a.context_file).read_text(encoding="utf-8")).strip()
+    glossary = json.loads(Path(a.glossary).read_text(encoding="utf-8")) if a.glossary else {}
+    if not isinstance(glossary, dict):
+        raise SystemExit('--glossary must be a JSON object {"term": "rendering", ...}')
+    pages = None
+    if a.pages:
+        master = Master.load(out_dir / "master.json")
+        pages = pipeline.parse_pages(a.pages, max((p.page for p in master.pages), default=0))
+    cfg = translate.TranslateConfig(
+        out_dir=out_dir, to=a.to, mantra_script=a.mantra_script, gloss=a.gloss, context=context,
+        glossary={str(k): str(v) for k, v in glossary.items()}, model=a.model, pages=pages, jobs=a.jobs,
+        force=a.force,
+    )
+    with pipeline.out_lock(out_dir):
+        tr, failed = translate.translate_master(cfg)
+    print(f"translated pages: {len(tr.pages)}, failed: {len(failed)}")
+    print(f"translation: {cfg.path}")
+    if failed:
+        for p, err in failed:
+            print(f"  p{p}: {err[:200]}", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -91,13 +135,38 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--side-by-side", action="store_true", help="typeset Devanagari next to the target script")
     r.add_argument("--cross-read", action="store_true",
                    help="OCR every page a second time and flag lines the two reads disagree on (doubles OCR cost)")
+    r.add_argument("--source-script", default="devanagari", choices=supported_scripts(), metavar="SCRIPT",
+                   help="script the book is printed in: devanagari (default), telugu, or any vidyut script name; "
+                        "its Sanskrit becomes the Devanagari master")
+    r.add_argument("--languages", metavar="CODES",
+                   help='languages printed in the book as ISO 639-1 codes, e.g. "te,sa" for Telugu instructions '
+                        "around Sanskrit mantras (default: Sanskrit only)")
     r.set_defaults(func=_cmd_run)
 
     rd = sub.add_parser("render", help="re-render from DIR/master.json only (no OCR)")
     rd.add_argument("dir")
-    rd.add_argument("--script", default="kannada", choices=supported_scripts(), metavar="SCRIPT",
-                    help="target script: kannada (default), telugu, or any vidyut script name")
+    rd.add_argument("--script", choices=supported_scripts(), metavar="SCRIPT",
+                    help="target script: kannada (default), telugu, iast, or any vidyut script name; with "
+                         "--translation the default is the script the translation was made for")
     rd.add_argument("--side-by-side", action="store_true")
+    rd.add_argument("--translation", metavar="LANG",
+                    help="render the translated edition from DIR/translation.LANG.json (see `vedalipi translate`)")
+
+    tr = sub.add_parser("translate", help="translate DIR/master.json into another language (claude CLI)")
+    tr.add_argument("dir")
+    tr.add_argument("--to", default="en", metavar="LANG", help="target language, ISO 639-1 code (default en)")
+    tr.add_argument("--mantra-script", default="iast", choices=supported_scripts(), metavar="SCRIPT",
+                    help="script Sanskrit is shown in next to its meaning (default iast)")
+    tr.add_argument("--gloss", default="key", choices=["none", "key", "all"],
+                    help="word-by-word gloss: none, key (central mantras only, default) or all Sanskrit blocks")
+    tr.add_argument("--context", help='free text about the book, e.g. "Smarta, Krishna Yajurveda, follow Sayana"')
+    tr.add_argument("--context-file", help="file with more book context, appended to --context")
+    tr.add_argument("--glossary", help='JSON object of fixed renderings: {"achamana": "sipping water (achamana)"}')
+    tr.add_argument("--model", default="claude-opus-5-5", help="model for the claude CLI")
+    tr.add_argument("--pages", help='page selection, e.g. "1-5,8"')
+    tr.add_argument("--jobs", type=int, default=4, help="pages translated concurrently")
+    tr.add_argument("--force", action="store_true", help="re-translate pages even when unchanged (drops hand edits)")
+    tr.set_defaults(func=_cmd_translate)
     rd.set_defaults(func=_cmd_render)
 
     rp = sub.add_parser("report", help="stage status, OCR cost and flagged blocks")

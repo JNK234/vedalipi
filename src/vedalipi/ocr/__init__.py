@@ -15,8 +15,11 @@ BACKENDS: dict[str, str] = {
 }
 
 
-def get_backend(name: str, *, model: str | None = None) -> OcrBackend:
-    """Instantiate the backend registered under `name`."""
+def get_backend(
+    name: str, *, model: str | None = None, source_script: str = "devanagari", languages: tuple[str, ...] = ()
+) -> OcrBackend:
+    """Instantiate the backend registered under `name`, reading books printed in `source_script`
+    whose text is in `languages` (ISO 639-1 codes; empty means Sanskrit only)."""
     if name not in BACKENDS:
         raise ValueError(f"unknown OCR backend {name!r}; choose from {sorted(BACKENDS)}")
     module_name, cls_name = BACKENDS[name].split(":")
@@ -26,7 +29,12 @@ def get_backend(name: str, *, model: str | None = None) -> OcrBackend:
         if e.name == module_name:
             raise NotImplementedError(f"OCR backend {name!r} is not implemented yet ({module_name})") from e
         raise
-    return getattr(module, cls_name)(model=model)
+    backend = getattr(module, cls_name)(model=model)
+    if source_script != "devanagari" or languages:
+        if not hasattr(backend, "source_script"):
+            raise ValueError(f"OCR backend {name!r} reads Sanskrit-only Devanagari books, not {source_script!r}")
+        backend.source_script, backend.languages = source_script, tuple(languages)
+    return backend
 
 
 __all__ = ["BACKENDS", "OcrBackend", "OcrResult", "get_backend"]
