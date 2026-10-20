@@ -244,7 +244,7 @@
     // A translated edition: the Sanskrit, then its meaning and word gloss, kept together as one unit.
     let m = b.meaning
     let mf = (font: m.font, lang: m.lang, scale: m.scale)
-    block(width: 100%, breakable: not whole, ..space, {
+    block(width: 100%, breakable: not whole, sticky: sticky, ..space, {
       align(a, body-of(b, target, full))
       if m.lines.len() > 0 {
         set par(leading: S.leading * 0.62em, spacing: S.leading * 0.62em)

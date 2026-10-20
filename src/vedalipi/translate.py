@@ -24,7 +24,7 @@ from .schema import (
 )
 
 # Part of every page key: bump when the prompt or the payload format changes so pages are re-translated.
-TRANSLATE_PROMPT_VERSION = "t1"
+TRANSLATE_PROMPT_VERSION = "t2"
 
 GLOSS_MODES = ("none", "key", "all")
 
@@ -38,7 +38,7 @@ INPUT: a JSON object with "blocks": each has "id", "type" (heading, prose, verse
 RULES
 - Translate faithfully and completely. Never summarize, skip, soften or add content. Keep every instruction exact: which hand, how much water, how many times, facing which direction.
 - Non-Sanskrit blocks: translate into natural, clear "{to}". You may re-break lines: give one entry in "lines" per sentence or natural phrase. A sentence cut off at the end of the page stays cut off.
-- Sanskrit blocks (lang "sa"): give the MEANING of the mantra in natural "{to}", as one or a few sentences, in "lines". Do not transliterate it; the Sanskrit itself is printed separately. Follow the traditional commentary of the tradition named under BOOK CONTEXT; when it names none, follow the standard traditional (e.g. Sayana) reading. A bare list of divine names (e.g. "केशवाय नमः") becomes "Salutations to Keshava", one per line.
+- Sanskrit blocks (lang "sa"): give the MEANING of the mantra in natural "{to}", as one or a few sentences, in "lines". Do not transliterate it; the Sanskrit itself is printed separately. Follow the traditional commentary of the tradition named under BOOK CONTEXT; when it names none, follow the standard traditional (e.g. Sayana) reading. A bare list of divine names (e.g. "केशवाय नमः") becomes one salutation per name and line, in "{to}".
 - Sanskrit quoted inside a non-Sanskrit sentence (a mantra's first words, a deity's name) is not translated: write it in {mantra_script} letters with diacritics, e.g. "saying oṃ bhūḥ".
 - Ritual terms with no exact equivalent (achamana, sankalpa, arghya, tarpana, ...): keep the term in {mantra_script} letters and add a short meaning in parentheses the first time it appears on the page, unless the GLOSSARY gives a rendering; GLOSSARY renderings always win.
 - Tables: return "rows" with exactly the same number of rows and cells per row; translate every cell, keep numbers.
@@ -112,14 +112,19 @@ def page_payload(page: Page, before: Page | None = None) -> dict:
 
 
 def block_item(b: Block) -> dict | None:
-    """One block as the model sees it, or None when it has nothing to translate."""
+    """One block as the model sees it, or None when it has nothing to translate.
+
+    Sanskrit labels and Sanskrit tables are shown transliterated, with no meaning: they are not sent."""
     if b.type == "image":
-        if not b.labels:
+        labels = [lab.text for lab in b.labels or [] if not lab.is_sanskrit]
+        if not labels:
             return None
-        return {"id": b.id, "type": "image", "lang": b.lang, "labels": [lab.text for lab in b.labels]}
+        return {"id": b.id, "type": "image", "lang": b.lang, "labels": labels}
     if b.type in SKIP_TYPES:
         return None
     if b.rows is not None:
+        if b.is_sanskrit:
+            return None
         return {"id": b.id, "type": b.type, "lang": b.lang, "rows": b.rows}
     if not any(line.strip() for line in b.lines):
         return None
@@ -136,14 +141,21 @@ def user_prompt(cfg: TranslateConfig, title: str, page: int, payload: dict) -> s
     return "\n\n".join(parts)
 
 
+def source_hash(payload: dict) -> str:
+    """Hash of a page's own text. The previous page's tail (context_before) is a hint, not part of it, so an
+    edit on one page never re-translates the next."""
+    return hashlib.sha256(json.dumps(payload["blocks"], ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
 def page_key(cfg: TranslateConfig, title: str, payload: dict) -> str:
-    """Hash of everything that shapes a page's translation; a changed key means the page is re-translated."""
+    """Hash of the page text and every setting that shapes its translation; a changed key means the page is
+    re-translated."""
     h = hashlib.sha256()
     for part in (TRANSLATE_PROMPT_VERSION, cfg.model, cfg.to, cfg.mantra_script, cfg.gloss, cfg.context, title):
         h.update(part.encode())
         h.update(b"\0")
     h.update(json.dumps(cfg.glossary, ensure_ascii=False, sort_keys=True).encode())
-    h.update(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode())
+    h.update(source_hash(payload).encode())
     return h.hexdigest()
 
 
@@ -229,21 +241,26 @@ def translate_master(cfg: TranslateConfig, *, backend=None) -> tuple[Translation
     master = Master.load(cfg.out_dir / "master.json")
     tr = Translation.load(cfg.path) if cfg.path.exists() else Translation(lang=cfg.to, mantra_script=cfg.mantra_script)
     if tr.mantra_script != cfg.mantra_script:
+        if tr.pages and cfg.pages is not None:
+            # The whole file shares one mantra script: re-translating some pages would leave a mix.
+            raise ValueError(f"{cfg.path.name} is in {tr.mantra_script}; change the mantra script for all pages "
+                             "(no --pages), or keep it")
         print(f"mantra script changed {tr.mantra_script} -> {cfg.mantra_script}; pages will be re-translated", file=sys.stderr)
         tr.mantra_script = cfg.mantra_script
     wanted = set(cfg.pages) if cfg.pages is not None else {p.page for p in master.pages}
     by_number = {p.page: p for p in master.pages}
-    todo: list[tuple[int, dict, str]] = []
+    todo: list[tuple[int, dict, str, str]] = []
     for p in sorted(wanted & set(by_number)):
         payload = page_payload(by_number[p], by_number.get(p - 1))
         key = page_key(cfg, master.title, payload)
         old = tr.pages.get(p)
+        src = source_hash(payload)
         if not payload["blocks"]:
-            tr.pages[p] = PageTranslation(key=key)
+            tr.pages[p] = PageTranslation(key=key, source=src)
         elif cfg.force or old is None or old.key != key:
             if old is not None and old.key != key:
                 print(f"[p{p:04d}] page text or settings changed; re-translating (hand edits to it are dropped)", file=sys.stderr)
-            todo.append((p, payload, key))
+            todo.append((p, payload, key, src))
     backend = backend or _backend(cfg.model)
     mpath = cfg.out_dir / "work" / "manifest.json"
     manifest = Manifest.load(mpath) if mpath.exists() else None
@@ -254,9 +271,9 @@ def translate_master(cfg: TranslateConfig, *, backend=None) -> tuple[Translation
         return translate_page(backend, cfg, master.title, p, payload)
 
     with ThreadPoolExecutor(max_workers=max(1, cfg.jobs)) as pool:
-        futures = {pool.submit(one, p, payload): (p, key) for p, payload, key in todo}
+        futures = {pool.submit(one, p, payload): (p, key, src) for p, payload, key, src in todo}
         for fut in as_completed(futures):
-            p, key = futures[fut]
+            p, key, src = futures[fut]
             now = datetime.now(UTC).isoformat(timespec="seconds")
             try:
                 blocks, cost = fut.result()
@@ -270,7 +287,7 @@ def translate_master(cfg: TranslateConfig, *, backend=None) -> tuple[Translation
                         status="failed", input_hash=key, spent_usd=(prev.spent_usd if prev else 0.0) + cost,
                         error=str(e)[:500], updated_at=now))
                 continue
-            tr.pages[p] = PageTranslation(key=key, blocks=blocks)
+            tr.pages[p] = PageTranslation(key=key, source=src, blocks=blocks)
             if manifest is not None:
                 prev = manifest.record(p, stage)
                 manifest.set_record(p, stage, StageRecord(
@@ -288,7 +305,7 @@ def translate_master(cfg: TranslateConfig, *, backend=None) -> tuple[Translation
 
 
 def stale_pages(master: Master, tr: Translation, cfg: TranslateConfig) -> list[int]:
-    """Master pages with no translation, or whose text changed since they were translated."""
+    """Master pages with no translation, or whose text or settings changed since they were translated."""
     by_number = {p.page: p for p in master.pages}
     out = []
     for p, page in by_number.items():
@@ -299,19 +316,27 @@ def stale_pages(master: Master, tr: Translation, cfg: TranslateConfig) -> list[i
 
 
 def apply_translation(
-    target: Master, tr: Translation
-) -> tuple[Master, dict[tuple[int, str], BlockTranslation], list[tuple[int, str]]]:
-    """Lay a translation over `target` (the master already transliterated into the mantra script).
+    master: Master, target: Master, tr: Translation
+) -> tuple[Master, dict[tuple[int, str], BlockTranslation], list[tuple[int, str]], list[int]]:
+    """Lay a translation over `target` (the Devanagari `master` transliterated into the mantra script).
 
     Non-Sanskrit blocks and labels are replaced by their translation and take the translation's language;
     Sanskrit stays as transliterated and its meaning is returned as {(page, block id): BlockTranslation}.
-    Blocks with text but no translation are returned as (page, block id) and left as they are.
+    A page whose master text changed since it was translated is stale: none of its stored translation is
+    used, because block ids are positions and would pair text with the wrong blocks. Returns the edition,
+    the meanings, the (page, block id) of blocks printed untranslated, and the stale pages.
     """
     out = target.model_copy(deep=True)
+    by_number = {p.page: p for p in master.pages}
     meanings: dict[tuple[int, str], BlockTranslation] = {}
     missing: list[tuple[int, str]] = []
+    stale: list[int] = []
     for page in out.pages:
         pt = tr.pages.get(page.page)
+        src = by_number.get(page.page)
+        if pt is not None and src is not None and pt.source != source_hash(page_payload(src)):
+            stale.append(page.page)
+            pt = None
         for b in page.blocks:
             if block_item(b) is None:
                 continue
@@ -320,13 +345,13 @@ def apply_translation(
                 missing.append((page.page, b.id))
                 continue
             if b.type == "image":
-                for label, text in zip(b.labels or [], bt.labels or []):
-                    if not label.is_sanskrit:
-                        label.text, label.lang = text, tr.lang
+                others = [lab for lab in b.labels or [] if not lab.is_sanskrit]
+                for label, text in zip(others, bt.labels or []):
+                    label.text, label.lang = text, tr.lang
             elif b.is_sanskrit:
                 meanings[(page.page, b.id)] = bt
             elif b.rows is not None and bt.rows is not None:
                 b.rows, b.lang = bt.rows, tr.lang
             else:
                 b.lines, b.lang = bt.lines, tr.lang
-    return out, meanings, missing
+    return out, meanings, missing, stale

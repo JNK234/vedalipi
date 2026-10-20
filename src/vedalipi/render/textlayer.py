@@ -97,6 +97,18 @@ def _hex_text(raw: bytes) -> str:
     return b.decode("utf-16-be", errors="replace")
 
 
+def _text_string(kind: str, raw: bytes) -> str:
+    """Text of an /ActualText value. Typst writes Indic clusters as UTF-16BE hex strings, but plain Latin
+    text as literal strings such as (a): UTF-16BE when it opens with a byte order mark, else PDFDocEncoding,
+    which matches Latin-1 for the characters such a string holds."""
+    if kind == "hex":
+        return _hex_text(raw)
+    b = _string_bytes(raw)
+    if b.startswith(b"\xfe\xff"):
+        return b[2:].decode("utf-16-be", errors="replace")
+    return b.decode("latin-1")
+
+
 def parse_tounicode(cmap: bytes) -> dict[int, str]:
     """Glyph code -> text from a ToUnicode CMap (bfchar and bfrange sections)."""
     out: dict[int, str] = {}
@@ -267,7 +279,7 @@ class _Walker:
                 if actual:
                     idx = [i for i, (_, r) in enumerate(operands) if r == b"/ActualText"]
                     val = operands[idx[0] + 1] if idx and idx[0] + 1 < len(operands) else None
-                    text = _hex_text(val[1]) if val and val[0] == "hex" else ""
+                    text = _text_string(*val) if val and val[0] in ("hex", "str") else ""
                     # Maybe a repeated piece: decided at the span's first glyph (its code and position).
                     candidate = self.new_run and len(text) > 1 and text == self.last
                     self.pending = (len(out), list(operands), idx[0] + 1 if idx else 0, text, candidate)

@@ -17,7 +17,7 @@ from .render.document import (
     header_logo,
     is_edge_artifact,
 )
-from .render.textlayer import _glyphs, _hex_text, _mul, _page_fonts, _tokenize
+from .render.textlayer import _glyphs, _mul, _page_fonts, _text_string, _tokenize
 from .schema import Manifest, Master, Page, atomic_write_text
 
 # Whitespace, ZWNJ, ZWJ and soft hyphens carry no content: a wrapped or re-spaced line still matches.
@@ -112,7 +112,7 @@ def _page_runs(doc, page) -> list[Run]:
                 actual = None
                 if b"/ActualText" in vals and vals.index(b"/ActualText") + 1 < len(operands):
                     k, v = operands[vals.index(b"/ActualText") + 1]
-                    actual = _hex_text(v) if k == "hex" else ""
+                    actual = _text_string(k, v) if k in ("hex", "str") else ""
                 spans.append([actual, False])
             elif raw == b"BMC":
                 spans.append([None, False])
@@ -227,44 +227,55 @@ def _item(page: int, block: str, kind: str, text: str, **extra) -> dict:
     return {"page": page, "block": block, "kind": kind, "text": text, **extra}
 
 
-def _text_items(page: Page, replaced: list[dict]) -> list[tuple[str, str, str]]:
+def _text_items(page: Page, replaced: list[dict], meanings: dict | None = None) -> list[tuple[str, str, str]]:
     """(block id, kind, text) of everything book.typ typesets in the body of this page, in source order;
-    what the template deliberately leaves out is appended to `replaced` with the reason."""
+    what the template deliberately leaves out is appended to `replaced` with the reason. `meanings` (a
+    translated edition) adds each Sanskrit block's meaning lines and gloss right after the block."""
     items: list[tuple[str, str, str]] = []
     for b in page.blocks:
-        if b.type == "page_number":
-            replaced.append(_item(page.page, b.id, "page_number", " ".join(b.lines),
-                                  reason="printed source numbers are left out; the footer numbers output pages "
-                                         "and names the source page as \"src p. N\""))
-        elif b.type == "running_header":
-            continue  # checked against the page header (see _check_header)
-        elif b.type in ("image", "separator"):
-            if is_edge_artifact(b):
-                replaced.append(_item(page.page, b.id, "image", "", reason="thin image at the page edge: the scan's "
-                                      "border or binding shadow, not content (render.document.is_edge_artifact)"))
-            if any(line.strip() for line in b.lines):
-                replaced.append(_item(page.page, b.id, b.type, " ".join(b.lines),
-                                      reason=f"a {b.type} block is drawn, its text is not typeset"))
-            # A drawing's labels are typeset over it in the target script (book.typ label-box).
-            if not is_edge_artifact(b):
-                for label in b.labels or []:
-                    items.append((b.id, "label", label.text))
-        elif b.type == "fill_blank":
-            for line in b.lines:
-                items.append((b.id, "line", BLANK_RE.sub("", line)))
-            if any(BLANK_RE.search(line) for line in b.lines):
-                replaced.append(_item(page.page, b.id, "fill_blank", " / ".join(b.lines),
-                                      reason="dot and underscore leaders are drawn as dotted rules, not text"))
-        elif b.type == "table":
-            for row in b.rows or []:
-                for cell in row:
-                    items.append((b.id, "cell", cell))
-        else:
-            # Headings, verse, prose, foreign text and list items (book.typ splits off a printed list marker
-            # into its own column and adds "•" when there is none; the text itself is unchanged).
-            for line in b.lines:
-                items.append((b.id, "line", line))
+        _block_items(page, b, items, replaced)
+        bt = (meanings or {}).get((page.page, b.id))
+        if bt is not None:
+            items.extend((b.id, "meaning", line) for line in bt.lines)
+            for word, meaning in bt.gloss or []:
+                items.extend([(b.id, "gloss", word), (b.id, "gloss", meaning)])
     return items
+
+
+def _block_items(page: Page, b, items: list[tuple[str, str, str]], replaced: list[dict]) -> None:
+    """Append one block's typeset text to `items` (see _text_items)."""
+    if b.type == "page_number":
+        replaced.append(_item(page.page, b.id, "page_number", " ".join(b.lines),
+                              reason="printed source numbers are left out; the footer numbers output pages "
+                                     "and names the source page as \"src p. N\""))
+    elif b.type == "running_header":
+        return  # checked against the page header (see _check_header)
+    elif b.type in ("image", "separator"):
+        if is_edge_artifact(b):
+            replaced.append(_item(page.page, b.id, "image", "", reason="thin image at the page edge: the scan's "
+                                  "border or binding shadow, not content (render.document.is_edge_artifact)"))
+        if any(line.strip() for line in b.lines):
+            replaced.append(_item(page.page, b.id, b.type, " ".join(b.lines),
+                                  reason=f"a {b.type} block is drawn, its text is not typeset"))
+        # A drawing's labels are typeset over it in the target script (book.typ label-box).
+        if not is_edge_artifact(b):
+            for label in b.labels or []:
+                items.append((b.id, "label", label.text))
+    elif b.type == "fill_blank":
+        for line in b.lines:
+            items.append((b.id, "line", BLANK_RE.sub("", line)))
+        if any(BLANK_RE.search(line) for line in b.lines):
+            replaced.append(_item(page.page, b.id, "fill_blank", " / ".join(b.lines),
+                                  reason="dot and underscore leaders are drawn as dotted rules, not text"))
+    elif b.type == "table":
+        for row in b.rows or []:
+            for cell in row:
+                items.append((b.id, "cell", cell))
+    else:
+        # Headings, verse, prose, foreign text and list items (book.typ splits off a printed list marker
+        # into its own column and adds "•" when there is none; the text itself is unchanged).
+        for line in b.lines:
+            items.append((b.id, "line", line))
 
 
 def _align(seg: str, needles: list[str]) -> dict[int, tuple[int, int]]:
@@ -318,15 +329,27 @@ def _claim(text: dict[int, str], used: dict[int, list[tuple[int, int]]], needle:
     return False
 
 
-def judge(out_dir: Path, script: str) -> dict:
-    """Check OUT/<book>.<script>.pdf against OUT/master.json; returns the report (also written to work/)."""
+def judge(out_dir: Path, script: str, translation: str | None = None) -> dict:
+    """Check OUT/<book>.<script>[.<lang>].pdf against OUT/master.json (and, for a translated edition,
+    OUT/translation.<lang>.json); returns the report (also written to work/)."""
     out_dir = Path(out_dir)
     master = Master.load(out_dir / "master.json")
     # Exactly what the render command typesets (the U+A8F3 stand-in included).
     target = transliterate.transliterate_master(master, script)
-    pdf = pipeline.pdf_path(out_dir, master, script)
+    meanings: dict = {}
+    untranslated: list[tuple[int, str]] = []
+    if translation:
+        from . import translate
+        from .schema import Translation
+
+        tpath = translate.translation_path(out_dir, translation)
+        if not tpath.is_file():
+            raise RuntimeError(f"no {tpath}; run `vedalipi translate {out_dir} --to {translation}` first")
+        target, meanings, untranslated, _ = translate.apply_translation(master, target, Translation.load(tpath))
+    pdf = pipeline.pdf_path(out_dir, master, script, translation=translation)
     if not pdf.is_file():
-        raise RuntimeError(f"no rendered PDF at {pdf}; run `vedalipi render {out_dir} --script {script}` first")
+        how = f" --translation {translation}" if translation else ""
+        raise RuntimeError(f"no rendered PDF at {pdf}; run `vedalipi render {out_dir} --script {script}{how}` first")
     manifest_path = out_dir / "work" / "manifest.json"
     if not manifest_path.is_file():
         raise RuntimeError(f"no {manifest_path}: without the source page count, coverage of pages 1..N "
@@ -336,9 +359,10 @@ def judge(out_dir: Path, script: str) -> dict:
     pages = read_pdf(pdf)
     book = segment(pages, target.pages[0].page if target.pages else None)
     by_number = {p.number: p for p in pages}
-    report = {"script": script, "pdf": str(pdf), "pages_checked": 0, "lines_checked": 0, "cells_checked": 0,
-              "labels_checked": 0, "images_checked": 0, "missing": [], "out_of_order": [], "empty_pages": [], "missing_markers": [],
-              "replaced_by_template": []}
+    report = {"script": script, "translation": translation, "pdf": str(pdf), "pages_checked": 0, "lines_checked": 0,
+              "cells_checked": 0, "labels_checked": 0, "meanings_checked": 0, "images_checked": 0, "missing": [],
+              "out_of_order": [], "empty_pages": [], "missing_markers": [], "replaced_by_template": [],
+              "untranslated": [_item(p, b, "block", "") for p, b in untranslated]}
     missing, out_of_order, replaced = report["missing"], report["out_of_order"], report["replaced_by_template"]
     used: dict[int, list[tuple[int, int]]] = {}  # source page -> spans of its PDF text backing a master line
     unmatched: list[tuple[int, str, str, str, str]] = []  # (page, block, kind, text, needle) not found in order
@@ -359,9 +383,10 @@ def judge(out_dir: Path, script: str) -> dict:
             report["empty_pages"].append(page.page)
 
         # Text, in reading order within this source page's stretch of the PDF.
-        items = [(page.page, b, k, t, norm(t)) for b, k, t in _text_items(page, replaced)]
+        items = [(page.page, b, k, t, norm(t)) for b, k, t in _text_items(page, replaced, meanings)]
         items = [it for it in items if it[4]]
-        counters = {"cell": "cells_checked", "label": "labels_checked"}
+        counters = {"cell": "cells_checked", "label": "labels_checked", "meaning": "meanings_checked",
+                    "gloss": "meanings_checked"}
         for it in items:
             report[counters.get(it[2], "lines_checked")] += 1
         seg = book.text.get(page.page, "")
@@ -388,8 +413,10 @@ def judge(out_dir: Path, script: str) -> dict:
             missing.append(_item(n, block_id, kind, text))
     missing.sort(key=lambda m: m["page"])
 
-    report["passed"] = not (missing or report["missing_markers"])
-    atomic_write_text(out_dir / "work" / f"judge-{script}.json", json.dumps(report, ensure_ascii=False, indent=1) + "\n")
+    # An untranslated block is printed, but a translated edition that still holds one is not finished.
+    report["passed"] = not (missing or report["missing_markers"] or report["untranslated"])
+    name = f"judge-{script}{f'-{translation}' if translation else ''}.json"
+    atomic_write_text(out_dir / "work" / name, json.dumps(report, ensure_ascii=False, indent=1) + "\n")
     return report
 
 
@@ -429,7 +456,8 @@ def summary(report: dict) -> str:
     lines = [
         f"judge {report['script']}: {report['pdf']}",
         (f"checked {report['pages_checked']} pages, {report['lines_checked']} lines, "
-         f"{report['cells_checked']} cells, {report['labels_checked']} labels, {report['images_checked']} images"),
+         f"{report['cells_checked']} cells, {report['labels_checked']} labels, "
+         f"{report.get('meanings_checked', 0)} meaning/gloss lines, {report['images_checked']} images"),
         (f"missing: {len(report['missing'])}, out of order: {len(report['out_of_order'])}, "
          f"missing markers: {len(report['missing_markers'])}, empty pages: {len(report['empty_pages'])}, "
          f"replaced by template: {len(report['replaced_by_template'])}"),
@@ -439,6 +467,9 @@ def summary(report: dict) -> str:
             lines.append(f"  {key} p{m['page']} {m['block']} {m['kind']}: {m['text'][:60]}")
         if len(report[key]) > 20:
             lines.append(f"  ...and {len(report[key]) - 20} more {key}")
+    if report.get("untranslated"):
+        pages = sorted({m["page"] for m in report["untranslated"]})
+        lines.append(f"  untranslated: {len(report['untranslated'])} blocks on pages {pages}")
     if report["missing_markers"]:
         lines.append(f"  missing markers: {report['missing_markers']}")
     if report["empty_pages"]:

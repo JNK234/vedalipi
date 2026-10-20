@@ -507,10 +507,16 @@ def _render(out_dir: Path, script: str, *, side_by_side: bool = False, translati
         tpath = translate.translation_path(out_dir, translation)
         if not tpath.exists():
             raise FileNotFoundError(f"no {tpath.name}; run `vedalipi translate {out_dir} --to {translation}` first")
+        if side_by_side:
+            raise ValueError("a translated edition has no side-by-side layout; render it without --side-by-side")
         tr = Translation.load(tpath)
-        target, meanings, missing = translate.apply_translation(target, tr)
+        target, meanings, missing, stale = translate.apply_translation(master, target, tr)
+        for p in stale:
+            print(f"[p{p:04d}] master text changed since it was translated; printed untranslated "
+                  f"(run `vedalipi translate {out_dir} --to {translation}`)", file=sys.stderr)
         for p, bid in missing:
-            print(f"[p{p:04d}] {bid}: no translation; printed untranslated", file=sys.stderr)
+            if p not in stale:
+                print(f"[p{p:04d}] {bid}: no translation; printed untranslated", file=sys.stderr)
     atomic_write_text(diagnostics_path(out_dir, script), json.dumps(diagnostics, ensure_ascii=False, indent=1) + "\n")
     for d in diagnostics:
         print(f"[p{d['page']:04d}] {d['block']}: round trip failed: {d['text']!r} -> {d['back']!r}", file=sys.stderr)
@@ -591,7 +597,16 @@ def report(out_dir: Path) -> str:
             for name, rec in stages.items():
                 if rec.status == "failed":
                     lines.append(f"  FAILED p{page:04d} {name}: {rec.error}")
-        lines.append(f"OCR cost: ${m.total_cost():.2f} for the cached outputs, ${m.total_spent():.2f} spent in total")
+        # Translation records sit in the same manifest under translate-<lang>; their cost is reported apart.
+        tr_stages = sorted({n for st in m.pages.values() for n in st if n.startswith("translate-")})
+        cost = lambda pred, f: sum(f(r) for st in m.pages.values() for n, r in st.items() if pred(n))  # noqa: E731
+        is_tr = lambda n: n.startswith("translate-")  # noqa: E731
+        cached, spent = (lambda r: r.cost_usd), (lambda r: max(r.spent_usd, r.cost_usd))
+        lines.append(f"OCR cost: ${cost(lambda n: not is_tr(n), cached):.2f} for the cached outputs, "
+                     f"${cost(lambda n: not is_tr(n), spent):.2f} spent in total")
+        for name in tr_stages:
+            lines.append(f"{name} cost: ${cost(lambda n, name=name: n == name, cached):.2f} for the cached outputs, "
+                         f"${cost(lambda n, name=name: n == name, spent):.2f} spent in total")
     master_path = out_dir / "master.json"
     if master_path.exists():
         master = Master.load(master_path)

@@ -311,7 +311,8 @@ def test_apply_translation_replaces_other_languages_and_returns_meanings():
         "b6": BlockTranslation(labels=["North", "salutation"]),
     })})
     target = transliterate.transliterate_master(m, "iast")
-    out, meanings, missing = tl.apply_translation(target, tr)
+    tr.pages[1].source = tl.source_hash(tl.page_payload(m.page(1)))
+    out, meanings, missing, stale = tl.apply_translation(m, target, tr)
     p1 = out.page(1)
     assert p1.block("b1").lines == ["Sandhya"] and p1.block("b1").lang == "en"
     assert p1.block("b2").lines == ["oṃ bhūrbhu̍va̍ḥ"] and p1.block("b2").lang == "sa"
@@ -330,7 +331,8 @@ def test_document_of_a_translated_edition(tmp_path):
     tr = Translation(lang="en", mantra_script="iast", pages={1: PageTranslation(key="k", blocks={
         "b1": BlockTranslation(lines=["Sandhya"]), "b2": BlockTranslation(lines=["Om."], gloss=[["oṃ", "om"]]),
         "b3": BlockTranslation(rows=[["One", "1"], ["Two", "2"]])})})
-    target, meanings, _ = tl.apply_translation(transliterate.transliterate_master(m, "iast"), tr)
+    tr.pages[1].source = tl.source_hash(tl.page_payload(m.page(1)))
+    target, meanings, _, _ = tl.apply_translation(m, transliterate.transliterate_master(m, "iast"), tr)
     doc = build_document(m, target, script="iast", side_by_side=False, work_dir=tmp_path, build_dir=tmp_path,
                          meanings=meanings, meaning_lang="en", translated=True)
     blocks = {b["id"]: b for b in doc["pages"][0]["blocks"]}
@@ -357,3 +359,99 @@ def test_render_translation_needs_its_file(tmp_path):
     cfg = setup_out(tmp_path)
     with pytest.raises(FileNotFoundError, match="vedalipi translate"):
         pipeline.render_from_master(cfg.out_dir, "iast", translation="en")
+
+
+# ---------------------------------------------------------------- review fixes
+
+
+def test_render_leaves_stale_pages_untranslated(tmp_path):
+    cfg = setup_out(tmp_path)
+    tl.translate_master(cfg, backend=FakeClaude())
+    m = Master.load(cfg.out_dir / "master.json")
+    # A block added at the top of page 2 shifts every id: the stored translation must not be laid over it.
+    m.page(2).blocks.insert(0, Block(id="b0", type="prose", lang="te", lines=["కొత్త"]))
+    m.save(cfg.out_dir / "master.json")
+    target = transliterate.transliterate_master(m, "iast")
+    out, _, missing, stale = tl.apply_translation(m, target, Translation.load(cfg.path))
+    assert stale == [2] and (2, "b0") in missing and out.page(2).block("b1").lines == ["నీళ్లు తీసుకొని"]
+
+
+def test_an_edit_on_one_page_does_not_re_translate_the_next(tmp_path):
+    cfg = setup_out(tmp_path)
+    fake = FakeClaude()
+    tl.translate_master(cfg, backend=fake)
+    m = Master.load(cfg.out_dir / "master.json")
+    m.page(1).block("b2").lines = ["ॐ भूः"]  # page 1's last text block is page 2's context_before
+    m.save(cfg.out_dir / "master.json")
+    tl.translate_master(cfg, backend=fake)
+    assert len(fake.calls) == 3 and "page 1." in fake.calls[-1]
+
+
+def test_partial_mantra_script_change_is_refused(tmp_path):
+    cfg = setup_out(tmp_path)
+    tl.translate_master(cfg, backend=FakeClaude())
+    cfg.mantra_script, cfg.pages = "iso15919", [1]
+    with pytest.raises(ValueError, match="all pages"):
+        tl.translate_master(cfg, backend=FakeClaude())
+
+
+def test_sanskrit_tables_and_labels_are_not_sent():
+    page = Page(page=1, blocks=[
+        Block(id="b1", type="table", lang="sa", rows=[["नमः", "1"]]),
+        Block(id="b2", type="image", lang="sa", bbox=[0, 0, 1, 1], labels=[
+            Label(text="नमः", lang="sa", bbox=[0, 0, 0.5, 0.5]), Label(text="ఉత్తరం", lang="te", bbox=[0.5, 0.5, 1, 1])]),
+    ])
+    assert tl.page_payload(page)["blocks"] == [{"id": "b2", "type": "image", "lang": "sa", "labels": ["ఉత్తరం"]}]
+
+
+@pytest.mark.parametrize("deva", ["अ॒ग्निमी॑ळे", "मीळ्हुषे", "ईळे॑"])
+def test_roman_la_with_macron_below_is_a_letter_not_an_accent(deva):
+    raw, out = transliterate._render_line(deva, "iast", None)
+    assert "ḻ" in unicodedata.normalize("NFC", out) and transliterate.roundtrip_ok(deva, raw, "iast")
+
+
+@pytest.mark.parametrize("scheme", ["slp1", "velthuis", "harvardkyoto", "wx"])
+def test_ascii_schemes_keep_their_own_punctuation(scheme):
+    for deva in ("शिवः॑ ।", "नमः ॥", "मीळ्हुषे"):
+        raw, out = transliterate._render_line(deva, scheme, None)
+        assert transliterate.roundtrip_ok(deva, raw, scheme), (scheme, deva, out)
+
+
+def test_report_separates_translation_cost(tmp_path):
+    cfg = setup_out(tmp_path)
+    tl.translate_master(cfg, backend=FakeClaude())
+    text = pipeline.report(cfg.out_dir)
+    assert "OCR cost: $0.00" in text and "translate-en cost: $0.20" in text
+
+
+def test_translated_edition_has_no_side_by_side(tmp_path):
+    cfg = setup_out(tmp_path)
+    tl.translate_master(cfg, backend=FakeClaude())
+    with pytest.raises(ValueError, match="side-by-side"):
+        pipeline.render_from_master(cfg.out_dir, "iast", side_by_side=True, translation="en")
+
+
+def test_judge_checks_a_translated_edition(tmp_path):
+    from vedalipi import judge
+
+    cfg = setup_out(tmp_path)
+    tl.translate_master(cfg, backend=FakeClaude())
+    pipeline.render_from_master(cfg.out_dir, "iast", translation="en")
+    report = judge.judge(cfg.out_dir, "iast", "en")
+    assert report["passed"], judge.summary(report)
+    assert report["meanings_checked"] >= 3  # meaning line, gloss word and gloss meaning
+    assert (cfg.out_dir / "work" / "judge-iast-en.json").exists()
+
+    # A translation edited after rendering is no longer what the PDF holds.
+    tr = Translation.load(cfg.path)
+    tr.pages[2].blocks["b1"].lines = ["Something the PDF does not say."]
+    tr.save(cfg.path)
+    report = judge.judge(cfg.out_dir, "iast", "en")
+    assert not report["passed"] and any(m["page"] == 2 for m in report["missing"])
+
+    # A page left untranslated fails the edition even though its text is printed.
+    del tr.pages[2]
+    tr.save(cfg.path)
+    pipeline.render_from_master(cfg.out_dir, "iast", translation="en")
+    report = judge.judge(cfg.out_dir, "iast", "en")
+    assert not report["passed"] and report["untranslated"]

@@ -97,7 +97,18 @@ def _cmd_report(a: argparse.Namespace) -> int:
 def _cmd_judge(a: argparse.Namespace) -> int:
     from . import judge
 
-    report = judge.judge(Path(a.dir).expanduser().resolve(), a.script)
+    out_dir = Path(a.dir).expanduser().resolve()
+    script = a.script
+    if script is None:
+        script = "kannada"
+        if a.translation:
+            from . import translate
+            from .schema import Translation
+
+            tpath = translate.translation_path(out_dir, a.translation)
+            if tpath.exists():
+                script = Translation.load(tpath).mantra_script
+    report = judge.judge(out_dir, script, a.translation)
     print(judge.summary(report))
     return 0 if report["passed"] else 1
 
@@ -175,8 +186,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     jd = sub.add_parser("judge", help="check that DIR's rendered PDF holds every line, cell and image of master.json")
     jd.add_argument("dir")
-    jd.add_argument("--script", default="kannada", choices=supported_scripts(), metavar="SCRIPT",
-                    help="script of the PDF to check: kannada (default), telugu, devanagari, ...")
+    jd.add_argument("--script", choices=supported_scripts(), metavar="SCRIPT",
+                    help="script of the PDF to check: kannada (default), telugu, devanagari, ...; with "
+                         "--translation the default is the script the translation was made for")
+    jd.add_argument("--translation", metavar="LANG", help="check the translated edition of DIR/translation.LANG.json")
     jd.set_defaults(func=_cmd_judge)
 
     ac = sub.add_parser("apply-corrections", help="apply a JSON list of corrections to DIR/master.json")

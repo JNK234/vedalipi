@@ -292,6 +292,8 @@ class PageTranslation(_JsonModel):
     re-translated only when its key changes, so hand edits to `blocks` survive re-runs."""
 
     key: str
+    # Hash of the page's source text alone: render uses only translations whose source still matches the master.
+    source: str = ""
     blocks: dict[str, BlockTranslation] = Field(default_factory=dict)
 
 

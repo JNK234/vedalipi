@@ -37,7 +37,11 @@ def _roman_marks(text: str, table: dict[str, str]) -> str:
     out: list[str] = []
     accents: list[str] = []
     for ch in unicodedata.normalize("NFD", text):
-        if ch in table:
+        # A mark fused into a consonant letter (l + U+0331 is ḻ, the ळ of IAST) is part of it, not an accent:
+        # accents sit on vowels.
+        letter = (bool(out) and not unicodedata.combining(out[-1]) and out[-1].lower() not in "aeiou"
+                  and len(unicodedata.normalize("NFC", out[-1] + ch)) == 1)
+        if ch in table and not letter:
             accents.append(table[ch])
         elif unicodedata.combining(ch):
             out.append(ch)
@@ -102,7 +106,7 @@ def _render_line(text: str, script: str, a8f3: str | None) -> tuple[str, str]:
     Round trips are checked against the raw form so the deliberate U+A8F3 substitution is not
     mistaken for a lossy conversion.
     """
-    if is_roman(script):
+    if is_roman(script) and "|" not in _letter_punct(script):
         # vidyut writes dandas as "." and "..", which run into fill-in dots; roman books print | and ||.
         text = text.replace("॥", "||").replace("।", "|")
     raw = _convert(text, DEVA, script)
@@ -110,6 +114,20 @@ def _render_line(text: str, script: str, a8f3: str | None) -> tuple[str, str]:
     if is_roman(script):
         out = _roman_marks(out, ROMAN_SVARA)
     return raw, out
+
+
+# Letters that ASCII roman schemes spell with punctuation (velthuis ".h", slp1 "|" for ळ्ह, ...).
+_PUNCT_PROBE = "कः कं कृ ॠ ऌ ळ ळ्ह ण ट ड ष ञ ङ ॐ ऽ"
+
+
+@lru_cache(maxsize=None)
+def _letter_punct(script: str) -> frozenset[str]:
+    """Which of "|" and "." the roman scheme `script` uses inside letters, so they cannot mark dandas or blanks."""
+    out = _convert(_PUNCT_PROBE, DEVA, script)
+    used = {c for c in "|." if c in out}
+    if _convert("क |", script, DEVA) != "क |":
+        used.add("|")
+    return frozenset(used)
 
 
 @lru_cache(maxsize=None)
@@ -156,12 +174,17 @@ def roundtrip_back(converted: str, script: str) -> str:
     """`converted` read back into Devanagari (a roman display form's Latin svara marks read as Vedic marks)."""
     if not is_roman(script):
         return _convert(converted, script, DEVA)
-    # Roman text: | and || are the dandas, and dots are fill-in blanks that vidyut would read as dandas.
-    # Typographic quotes are quotes: vidyut writes the avagraha as ASCII "'", but reads ’ as one too.
-    keep = {".": "\u2024", "\u2018": "\ue000", "\u2019": "\ue001"}
+    # Roman text: | and || are the dandas, and dots are fill-in blanks that vidyut would read as dandas,
+    # unless the scheme spells letters with them. Typographic quotes are quotes: vidyut writes the avagraha
+    # as ASCII "'", but reads ’ as one too.
+    punct = _letter_punct(script)
+    keep = {"\u2018": "\ue000", "\u2019": "\ue001"}
+    if not punct:
+        # Dandas went out as | and ||, so every dot is a printed dot.
+        keep["."] = "\u2024"
     converted = _roman_marks(converted, _ROMAN_BACK).translate(str.maketrans(keep))
     back = _convert(converted, script, DEVA).translate(str.maketrans({v: k for k, v in keep.items()}))
-    return back.replace("||", "॥").replace("|", "।")
+    return back if "|" in punct else back.replace("||", "॥").replace("|", "।")
 
 
 def roundtrip_ok(devanagari: str, converted: str, script: str) -> bool:
