@@ -280,6 +280,17 @@
           m.gloss.map(g => [#text(style: "italic", g.at(0)) — #g.at(1)]).join([; ]))))
       }
     })
+  } else if b.at("meaning", default: none) != none {
+    // A Sanskrit heading of a translated edition: the heading, then its meaning under it.
+    let m = b.meaning
+    let mf = (font: m.font, lang: m.lang, scale: m.scale)
+    block(width: 100%, breakable: not whole, sticky: sticky, ..space, {
+      align(a, body-of(b, target, full))
+      if m.lines.len() > 0 {
+        block(above: 0.45em, below: 0pt, align(a, text(size: S.at("meaning_size", default: 0.86) * 1em, style: "italic",
+          styled(mf, join-lines(m.lines)))))
+      }
+    })
   } else if b.orig == none {
     block(width: 100%, breakable: not whole, sticky: sticky, ..space, align(a, body-of(b, target, full)))
   } else {

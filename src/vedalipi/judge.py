@@ -12,6 +12,7 @@ from pathlib import Path
 from . import pipeline, transliterate
 from .render.document import (
     BLANK_RE,
+    MANTRA_TYPES,
     BODY_EXCLUDED,
     STYLE,
     header_logo,
@@ -235,7 +236,7 @@ def _text_items(page: Page, replaced: list[dict], meanings: dict | None = None) 
     for b in page.blocks:
         _block_items(page, b, items, replaced)
         bt = (meanings or {}).get((page.page, b.id))
-        if bt is not None and bt.cue:
+        if bt is not None and bt.cue and b.type in MANTRA_TYPES:
             # The cue is printed before the mantra: it goes ahead of the block's own lines.
             at = next((i for i, it in enumerate(items) if it[0] == b.id), len(items))
             items.insert(at, (b.id, "meaning", bt.cue))

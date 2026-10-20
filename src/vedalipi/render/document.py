@@ -61,6 +61,9 @@ STYLE_TRANSLATED = {
     "cue_size": 11 / 12,
 }
 
+# Sanskrit blocks a translated edition sets apart as mantras, with a cue line; a Sanskrit heading or table is not.
+MANTRA_TYPES = ("verse", "prose", "list_item", "fill_blank")
+
 # Vedic accents and their stand-ins: a block carrying any of them gets the wider Vedic line pitch.
 SVARA_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3\u030D\u030E\u0331]")  # last three: roman svaras
 
@@ -358,8 +361,8 @@ def _block_data(
     # In a translated edition, text in the translation's language is new prose: it reflows freely, and a
     # mantra (Sanskrit body text) is set apart as a unit with its cue line before it.
     d["reflow"] = translated and not block.is_sanskrit
-    d["mantra"] = translated and block.is_sanskrit and block.type in ("verse", "prose", "list_item", "fill_blank")
-    d["cue"] = meaning.cue if meaning is not None and meaning.cue else None
+    d["mantra"] = translated and block.is_sanskrit and block.type in MANTRA_TYPES
+    d["cue"] = meaning.cue if d["mantra"] and meaning is not None and meaning.cue else None
     nf = lang_font(meaning_lang)
     d["note_font"] = {"font": family_chain(nf.family), "lang": nf.lang, "scale": nf.scale}
     # A Sanskrit block of a translated edition carries its meaning (and word gloss), set under the text.
