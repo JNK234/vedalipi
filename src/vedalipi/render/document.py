@@ -53,6 +53,12 @@ STYLE_TRANSLATED = {
     "gloss_size": 10 / 12,
     "body_align": "left",
     "justify": False,
+    # A mantra stands apart from the instructions: 13pt, open line spacing, clear space above and below,
+    # its one-line cue in bold before it.
+    "mantra_size": 13 / 12,
+    "mantra_leading": 0.62,
+    "mantra_gap": 1.5,
+    "cue_size": 11 / 12,
 }
 
 # Vedic accents and their stand-ins: a block carrying any of them gets the wider Vedic line pitch.
@@ -349,8 +355,13 @@ def _block_data(
     if show_orig:
         d["orig"] = {"lines": orig.lines, "rows": orig.rows or [], **_font(orig, "devanagari")}
 
-    # In a translated edition, text in the translation's language is new prose: it reflows freely.
+    # In a translated edition, text in the translation's language is new prose: it reflows freely, and a
+    # mantra (Sanskrit body text) is set apart as a unit with its cue line before it.
     d["reflow"] = translated and not block.is_sanskrit
+    d["mantra"] = translated and block.is_sanskrit and block.type in ("verse", "prose", "list_item", "fill_blank")
+    d["cue"] = meaning.cue if meaning is not None and meaning.cue else None
+    nf = lang_font(meaning_lang)
+    d["note_font"] = {"font": family_chain(nf.family), "lang": nf.lang, "scale": nf.scale}
     # A Sanskrit block of a translated edition carries its meaning (and word gloss), set under the text.
     d["meaning"] = None
     if meaning is not None and (meaning.lines or meaning.gloss):

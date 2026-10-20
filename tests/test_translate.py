@@ -180,6 +180,7 @@ def good_answer(payload: dict) -> str:
             item = {"id": b["id"], "lines": [f"EN {line}" for line in b["lines"]]}
             if b["lang"] == "sa":
                 item["gloss"] = [["oṃ", "the sacred syllable"]]
+                item["cue"] = "Recite:"
             blocks.append(item)
     return json.dumps({"blocks": blocks}, ensure_ascii=False)
 
@@ -231,8 +232,8 @@ def test_prompts_carry_language_context_glossary_and_gloss_rule(tmp_path):
 
 @pytest.mark.parametrize("answer, error", [
     ('{"blocks": []}', "missing"),
-    ('{"blocks": [{"id": "b1", "lines": ["x"]}, {"id": "b2", "lines": ["y"]}, {"id": "b3", "rows": [["a"]]}]}', "same shape"),
-    ('{"blocks": [{"id": "b1", "lines": []}, {"id": "b2", "lines": ["y"]}, {"id": "b3", "rows": [["a","b"],["c","d"]]}]}', "non-empty"),
+    ('{"blocks": [{"id": "b1", "lines": ["x"]}, {"id": "b2", "cue": "Recite:", "lines": ["y"]}, {"id": "b3", "rows": [["a"]]}]}', "same shape"),
+    ('{"blocks": [{"id": "b1", "lines": []}, {"id": "b2", "cue": "Recite:", "lines": ["y"]}, {"id": "b3", "rows": [["a","b"],["c","d"]]}]}', "non-empty"),
     ("no json here", ""),
 ])
 def test_parse_answer_rejects_answers_that_do_not_fit(answer, error):
@@ -507,3 +508,56 @@ def test_roman_edition_turns_copied_dandas_into_pipes():
         blocks={"b1": BlockTranslation(lines=["say “tat savitur। bhargo॥”"])})})
     out, _, _, _ = tl.apply_translation(m, transliterate.transliterate_master(m, "iast"), tr)
     assert out.page(2).block("b1").lines == ["say “tat savitur| bhargo||”"]
+
+
+# ---------------------------------------------------------------- cue lines and repeated mantras
+
+
+def test_sanskrit_answer_needs_a_cue():
+    payload = tl.page_payload(deva_master().page(1))
+    raw = json.loads(good_answer(payload))
+    del raw["blocks"][1]["cue"]
+    with pytest.raises(ValueError, match="cue"):
+        tl.parse_answer(json.dumps(raw), payload, gloss="key")
+    raw["blocks"][1]["cue"] = "  Sip water   while reciting: "
+    assert tl.parse_answer(json.dumps(raw), payload, gloss="key")["b2"].cue == "Sip water while reciting:"
+
+
+def test_mantra_key_ignores_svaras_spacing_and_punctuation_not_vowels():
+    a = Block(id="a", type="verse", lang="sa", lines=["ॐ भूर्भु॑वः॑ ।"])
+    b = Block(id="b", type="verse", lang="sa", lines=["ॐ  भूर्भुवः॥ 1"])
+    c = Block(id="c", type="verse", lang="sa", lines=["ॐ भूर्भावः"])
+    assert tl.mantra_key(a) == tl.mantra_key(b) != tl.mantra_key(c)
+
+
+def test_repeated_mantra_keeps_its_cue_but_not_its_meaning():
+    m = Master(title="t", pages=[
+        Page(page=1, blocks=[Block(id="b1", type="verse", lang="sa", lines=["ॐ भूर्भु॑वः॑"])]),
+        Page(page=2, blocks=[Block(id="b1", type="verse", lang="sa", lines=["ॐ भूर्भुवः ।"]),
+                             Block(id="b2", type="verse", lang="sa", lines=["....."])]),
+        Page(page=3, blocks=[Block(id="b1", type="verse", lang="sa", lines=["....."])]),
+    ])
+    bt = lambda cue: BlockTranslation(lines=["Om."], gloss=[["oṃ", "om"]], cue=cue)  # noqa: E731
+    out = tl.first_meanings(m, {(1, "b1"): bt("Sip:"), (2, "b1"): bt("Sprinkle:"), (2, "b2"): bt("Say:"),
+                                (3, "b1"): bt("Say:")})
+    assert out[(1, "b1")].lines == ["Om."] and out[(1, "b1")].gloss
+    assert out[(2, "b1")].lines == [] and out[(2, "b1")].gloss is None and out[(2, "b1")].cue == "Sprinkle:"
+    # Blocks with no letters (fill-in blanks) are never repeats of each other.
+    assert out[(3, "b1")].lines == ["Om."]
+
+
+def test_render_and_judge_print_cues_and_first_meanings_only(tmp_path):
+    from vedalipi import judge
+
+    m = deva_master()
+    m.page(2).blocks.append(Block(id="b2", type="verse", lang="sa", lines=["ॐ भूर्भुवः"]))  # page 1's mantra again
+    cfg = setup_out(tmp_path, m)
+    tl.translate_master(cfg, backend=FakeClaude())
+    pdf = pipeline.render_from_master(cfg.out_dir, "iast", translation="en")
+    text = unicodedata.normalize("NFC", "".join(page.get_text() for page in pymupdf.open(pdf)))
+    assert text.count("Recite:") == 2 and text.count("the sacred syllable") == 1
+    assert judge.judge(cfg.out_dir, "iast", "en")["passed"]
+    pdf = pipeline.render_from_master(cfg.out_dir, "iast", translation="en", all_meanings=True)
+    text = unicodedata.normalize("NFC", "".join(page.get_text() for page in pymupdf.open(pdf)))
+    assert text.count("the sacred syllable") == 2
+    assert judge.judge(cfg.out_dir, "iast", "en", all_meanings=True)["passed"]

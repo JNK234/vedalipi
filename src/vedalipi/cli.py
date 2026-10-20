@@ -54,7 +54,8 @@ def _cmd_render(a: argparse.Namespace) -> int:
             tpath = translate.translation_path(out_dir, a.translation)
             if tpath.exists():
                 script = Translation.load(tpath).mantra_script
-    pdf = pipeline.render_from_master(out_dir, script, side_by_side=a.side_by_side, translation=a.translation)
+    pdf = pipeline.render_from_master(out_dir, script, side_by_side=a.side_by_side, translation=a.translation,
+                                      all_meanings=a.all_meanings)
     print(f"pdf: {pdf}")
     return 0
 
@@ -108,7 +109,7 @@ def _cmd_judge(a: argparse.Namespace) -> int:
             tpath = translate.translation_path(out_dir, a.translation)
             if tpath.exists():
                 script = Translation.load(tpath).mantra_script
-    report = judge.judge(out_dir, script, a.translation)
+    report = judge.judge(out_dir, script, a.translation, all_meanings=a.all_meanings)
     print(judge.summary(report))
     return 0 if report["passed"] else 1
 
@@ -162,6 +163,8 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--side-by-side", action="store_true")
     rd.add_argument("--translation", metavar="LANG",
                     help="render the translated edition from DIR/translation.LANG.json (see `vedalipi translate`)")
+    rd.add_argument("--all-meanings", action="store_true",
+                    help="with --translation: print a mantra's meaning at every repeat, not only where it first appears")
 
     tr = sub.add_parser("translate", help="translate DIR/master.json into another language (claude CLI)")
     tr.add_argument("dir")
@@ -190,6 +193,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="script of the PDF to check: kannada (default), telugu, devanagari, ...; with "
                          "--translation the default is the script the translation was made for")
     jd.add_argument("--translation", metavar="LANG", help="check the translated edition of DIR/translation.LANG.json")
+    jd.add_argument("--all-meanings", action="store_true", help="the edition was rendered with --all-meanings")
     jd.set_defaults(func=_cmd_judge)
 
     ac = sub.add_parser("apply-corrections", help="apply a JSON list of corrections to DIR/master.json")

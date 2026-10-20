@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -25,7 +27,7 @@ from .schema import (
 )
 
 # Part of every page key: bump when the prompt or the payload format changes so pages are re-translated.
-TRANSLATE_PROMPT_VERSION = "t2"
+TRANSLATE_PROMPT_VERSION = "t3"
 
 GLOSS_MODES = ("none", "key", "all")
 
@@ -40,6 +42,7 @@ RULES
 - Translate faithfully and completely. Never summarize, skip, soften or add content. Keep every instruction exact: which hand, how much water, how many times, facing which direction.
 - Non-Sanskrit blocks: translate into natural, clear "{to}". You may re-break lines: give one entry in "lines" per sentence or natural phrase. A sentence cut off at the end of the page stays cut off.
 - Sanskrit blocks (lang "sa"): give the MEANING of the mantra in natural "{to}", as one or a few sentences, in "lines". Do not transliterate it; the Sanskrit itself is printed separately. Follow the traditional commentary of the tradition named under BOOK CONTEXT; when it names none, follow the standard traditional (e.g. Sayana) reading. A bare list of divine names (e.g. "केशवाय नमः") becomes one salutation per name and line, in "{to}".
+- CUE: every Sanskrit block also gets "cue": ONE short line in "{to}" that is printed just before the mantra and tells the reader what to do while reciting it (the action, the hand, the water, the direction, how many times), ending with a colon. Take it only from the book's own instructions around the mantra on this page or in context_before, whether they come before or after it. Never invent a ritual action the book does not give; when the book gives none, write a plain cue such as "Recite:" in "{to}". Keep it under about twelve words.
 - Sanskrit quoted inside a non-Sanskrit sentence (a mantra's first words, a deity's name) is not translated: write it in {mantra_script} letters with diacritics, e.g. "saying oṃ bhūḥ".
 - Ritual terms with no exact equivalent (achamana, sankalpa, arghya, tarpana, ...): keep the term in {mantra_script} letters and add a short meaning in parentheses the first time it appears on the page, unless the GLOSSARY gives a rendering; GLOSSARY renderings always win.
 - Tables: return "rows" with exactly the same number of rows and cells per row; translate every cell, keep numbers.
@@ -48,7 +51,7 @@ RULES
 - Text already in "{to}": copy it unchanged.
 {gloss_rule}
 OUTPUT: ONLY one JSON object, no prose, no markdown fences:
-{{"blocks": [{{"id": "...", "lines": ["..."]}}, {{"id": "...", "rows": [["..."]]}}, {{"id": "...", "labels": ["..."]}}, ...]}}
+{{"blocks": [{{"id": "...", "lines": ["..."]}}, {{"id": "...", "cue": "...:", "lines": ["..."]}}, {{"id": "...", "rows": [["..."]]}}, {{"id": "...", "labels": ["..."]}}, ...]}}
 Give exactly one entry for every input block id, in input order.
 """
 
@@ -193,6 +196,11 @@ def parse_answer(raw: str, payload: dict, *, gloss: str) -> dict[str, BlockTrans
             if not (isinstance(lines, list) and any(str(x).strip() for x in lines)):
                 raise TranslateError(f"block {bid!r}: give a non-empty list of lines")
             bt = BlockTranslation(lines=[str(x) for x in lines])
+            if src["lang"] == "sa":
+                cue = item.get("cue")
+                if not (isinstance(cue, str) and cue.strip()):
+                    raise TranslateError(f"block {bid!r}: a Sanskrit block needs a one-line \"cue\"")
+                bt.cue = " ".join(cue.split())
             g = item.get("gloss")
             if gloss != "none" and src["lang"] == "sa" and isinstance(g, list):
                 pairs = [[str(p[0]), str(p[1])] for p in g if isinstance(p, list) and len(p) == 2]
@@ -369,3 +377,34 @@ def apply_translation(
             else:
                 b.lines, b.lang = bt.lines, tr.lang
     return out, meanings, missing, stale
+
+
+# Svara marks: where two reads of one mantra most often differ, so they do not tell mantras apart.
+_SVARAS = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F1]")
+
+
+def mantra_key(block: Block) -> str:
+    """What makes two mantras the same for repeat detection: their letters and vowel signs. Spacing,
+    dandas, digits, punctuation, symbols and svara marks are left out."""
+    text = _SVARAS.sub("", unicodedata.normalize("NFC", "".join(block.lines)))
+    return "".join(c for c in text if unicodedata.category(c)[0] in "LM")
+
+
+def first_meanings(
+    master: Master, meanings: dict[tuple[int, str], BlockTranslation]
+) -> dict[tuple[int, str], BlockTranslation]:
+    """Meanings with every repeat of a mantra reduced to its cue: the meaning and gloss print only where the
+    mantra first appears in the book (reading order), so a mantra recited again does not repeat them."""
+    out: dict[tuple[int, str], BlockTranslation] = {}
+    seen: set[str] = set()
+    for page in master.pages:
+        for b in page.blocks:
+            bt = meanings.get((page.page, b.id))
+            if bt is None:
+                continue
+            key = mantra_key(b)
+            if key and key in seen:
+                bt = bt.model_copy(update={"lines": [], "gloss": None})
+            seen.add(key)
+            out[(page.page, b.id)] = bt
+    return out

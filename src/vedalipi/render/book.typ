@@ -253,17 +253,28 @@
   let whole = b.type == "table" and b.rows.len() <= 10
   // A heading is sticky: it never strands at the foot of a page away from the block it introduces.
   let sticky = b.type == "heading"
-  if b.at("meaning", default: none) != none {
-    // A translated edition: the Sanskrit, then its meaning and word gloss, kept together as one unit.
-    let m = b.meaning
-    let mf = (font: m.font, lang: m.lang, scale: m.scale)
-    block(width: 100%, breakable: not whole, sticky: sticky, ..space, {
-      align(a, body-of(b, target, full))
-      if m.lines.len() > 0 {
+  if b.at("mantra", default: false) {
+    // A mantra of a translated edition, set apart as one unit: its cue line (bold, never parted from the
+    // mantra), the mantra larger and with open line spacing beside a thin rule, then its meaning and gloss.
+    let nf = b.note_font
+    let m = b.at("meaning", default: none)
+    let mf = (font: nf.font, lang: nf.lang, scale: nf.scale)
+    let ml = S.at("mantra_leading", default: S.leading_vedic) * 1em
+    let mg = S.at("mantra_gap", default: S.verse_gap) * 1em
+    block(width: 100%, breakable: true, above: mg, below: mg, {
+      if b.cue != none {
+        block(sticky: true, above: 0pt, below: 0.5em, text(weight: "bold", size: S.at("cue_size", default: 1.0) * 1em,
+          styled(mf, [#b.cue])))
+      }
+      block(width: 100%, above: 0pt, below: 0pt, inset: (left: 0.9em, y: 0.15em), stroke: (left: 1.2pt + luma(160)), {
+        set par(leading: ml, spacing: ml)
+        text(size: S.at("mantra_size", default: 1.0) * 1em, body-of(b, target, full - 0.9em.to-absolute()))
+      })
+      if m != none and m.lines.len() > 0 {
         set par(leading: S.leading * 0.62em, spacing: S.leading * 0.62em)
         block(above: 0.55em, below: 0pt, inset: (left: 1.2em), text(size: S.at("meaning_size", default: 0.86) * 1em, style: "italic", styled(mf, join-lines(m.lines))))
       }
-      if m.gloss.len() > 0 {
+      if m != none and m.gloss.len() > 0 {
         set par(leading: S.leading * 0.55em)
         block(above: 0.5em, below: 0pt, inset: (left: 1.2em), text(size: S.at("gloss_size", default: 0.78) * 1em, styled(mf,
           m.gloss.map(g => [#text(style: "italic", g.at(0)) — #g.at(1)]).join([; ]))))

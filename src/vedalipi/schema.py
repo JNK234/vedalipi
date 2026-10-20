@@ -278,13 +278,15 @@ class Correction(_JsonModel):
 
 
 class BlockTranslation(_JsonModel):
-    """One block in the target language: its lines (or table rows, or label texts), plus an optional
-    word-by-word gloss [[word, meaning], ...] for a Sanskrit block."""
+    """One block in the target language: its lines (or table rows, or label texts), plus for a Sanskrit block
+    an optional word-by-word gloss [[word, meaning], ...] and the cue line printed before it."""
 
     lines: list[str] = Field(default_factory=list)
     rows: list[list[str]] | None = None
     labels: list[str] | None = None
     gloss: list[list[str]] | None = None
+    # For a Sanskrit block: one short line printed before the mantra, saying what to do while reciting it.
+    cue: str | None = None
 
 
 class PageTranslation(_JsonModel):

@@ -235,6 +235,10 @@ def _text_items(page: Page, replaced: list[dict], meanings: dict | None = None) 
     for b in page.blocks:
         _block_items(page, b, items, replaced)
         bt = (meanings or {}).get((page.page, b.id))
+        if bt is not None and bt.cue:
+            # The cue is printed before the mantra: it goes ahead of the block's own lines.
+            at = next((i for i, it in enumerate(items) if it[0] == b.id), len(items))
+            items.insert(at, (b.id, "meaning", bt.cue))
         if bt is not None:
             items.extend((b.id, "meaning", line) for line in bt.lines)
             for word, meaning in bt.gloss or []:
@@ -329,7 +333,7 @@ def _claim(text: dict[int, str], used: dict[int, list[tuple[int, int]]], needle:
     return False
 
 
-def judge(out_dir: Path, script: str, translation: str | None = None) -> dict:
+def judge(out_dir: Path, script: str, translation: str | None = None, all_meanings: bool = False) -> dict:
     """Check OUT/<book>.<script>[.<lang>].pdf against OUT/master.json (and, for a translated edition,
     OUT/translation.<lang>.json); returns the report (also written to work/)."""
     out_dir = Path(out_dir)
@@ -346,6 +350,8 @@ def judge(out_dir: Path, script: str, translation: str | None = None) -> dict:
         if not tpath.is_file():
             raise RuntimeError(f"no {tpath}; run `vedalipi translate {out_dir} --to {translation}` first")
         target, meanings, untranslated, _ = translate.apply_translation(master, target, Translation.load(tpath))
+        if not all_meanings:
+            meanings = translate.first_meanings(master, meanings)  # exactly what render prints
     pdf = pipeline.pdf_path(out_dir, master, script, translation=translation)
     if not pdf.is_file():
         how = f" --translation {translation}" if translation else ""

@@ -480,17 +480,23 @@ def pdf_path(
 
 
 def render_from_master(
-    out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None
+    out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None,
+    all_meanings: bool = False,
 ) -> Path:
     """Transliterate master.json into `script` and render <out>/<stem>.<script>.pdf. Never touches OCR.
 
     With `translation` (a language code), the edition of <out>/translation.<lang>.json: other-language text
-    replaced by its translation, Sanskrit in `script` with its meaning under it."""
+    replaced by its translation, Sanskrit in `script` with its cue before it and its meaning under it. A
+    mantra's meaning prints where it first appears; `all_meanings` prints it at every repeat too."""
     with out_lock(out_dir):
-        return _render(Path(out_dir), script, side_by_side=side_by_side, translation=translation)
+        return _render(Path(out_dir), script, side_by_side=side_by_side, translation=translation,
+                       all_meanings=all_meanings)
 
 
-def _render(out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None) -> Path:
+def _render(
+    out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None,
+    all_meanings: bool = False,
+) -> Path:
     import json
 
     from . import transliterate
@@ -517,6 +523,8 @@ def _render(out_dir: Path, script: str, *, side_by_side: bool = False, translati
         for p, bid in missing:
             if p not in stale:
                 print(f"[p{p:04d}] {bid}: no translation; printed untranslated", file=sys.stderr)
+        if not all_meanings:
+            meanings = translate.first_meanings(master, meanings)
     atomic_write_text(diagnostics_path(out_dir, script), json.dumps(diagnostics, ensure_ascii=False, indent=1) + "\n")
     for d in diagnostics:
         print(f"[p{d['page']:04d}] {d['block']}: round trip failed: {d['text']!r} -> {d['back']!r}", file=sys.stderr)
