@@ -101,7 +101,8 @@
 // "Acharya Vandhanam (ಆಚಾರ್ಯ ವನ್ದನಮ್)") are scaled back so they match the Indic body size.
 #let indic = regex("[\u{0900}-\u{0DFF}\u{1CD0}-\u{1CFF}\u{A8E0}-\u{A8FF}]+")
 #let styled(f, body) = {
-  let sc = f.at("scale", default: 1.0)
+  // A book set in one script (a translated edition) has no mixed scripts to even out: every font at 1.0.
+  let sc = if S.at("uniform_scale", default: false) { 1.0 } else { f.at("scale", default: 1.0) }
   text(font: f.font, lang: f.lang, size: sc * 1em, if f.lang == "en" and sc != 1.0 {
     show indic: it => text(size: 1em / sc, it)
     body
@@ -113,7 +114,11 @@
 #let seg-line(segs) = segs.map(s => if "blank" in s { h(0.15em) + blank(s.blank) + h(0.15em) } else { [#s.t] }).join()
 
 // Regular weight at every level, as prapatti sets its titles (23.91pt over a 16.74pt body).
-#let heading-size(level) = if level <= 1 { 1.43em } else if level == 2 { 1.2em } else { 1.08em }
+#let heading-size(level) = {
+  // A style may fix its own heading scale (one size per level, the last one for every deeper level).
+  let sizes = S.at("heading_sizes", default: (1.43, 1.2, 1.08))
+  sizes.at(calc.min(calc.max(level, 1), sizes.len()) - 1) * 1em
+}
 
 // Printed lines keep the source's line breaks: one output line per printed line. A block whose widest
 // line overruns `width` at the body size is set smaller, one size for the whole block, never below
@@ -146,8 +151,9 @@
   if b.type == "heading" {
     styled(f, text(size: heading-size(b.level), join-lines(src.lines)))
   } else if b.type == "prose" and b.at("reflow", default: false) {
-    // Translated prose has no printed line breaks to keep: it flows as one justified paragraph.
-    styled(f, par(justify: true, src.lines.join(" ")))
+    // Translated prose has no printed line breaks to keep: it flows as one paragraph (justified unless the
+    // style asks for even word spacing).
+    styled(f, par(justify: S.at("justify", default: true), src.lines.join(" ")))
   } else if b.type == "verse" or b.type == "prose" {
     printed-lines(b, f, src.lines, width)
   } else if b.type == "list_item" {
@@ -223,12 +229,19 @@
   if b.type == "image" { return render-image(b) }
   if b.type == "separator" { return align(center, block(above: 1em, below: 1em, line(length: 28%, stroke: 0.6pt + gray))) }
   // Reflowed (translated) prose is a paragraph of its own language: set left and justified, not as printed.
-  let a = if b.at("reflow", default: false) and b.type == "prose" { left } else { al(b.align) }
+  // A style may also fix heading alignment per level, so headings of one rank always sit alike.
+  // A style may set all body blocks to one alignment too, instead of following the scan block by block.
+  let ha = S.at("heading_align", default: none)
+  let ba = S.at("body_align", default: none)
+  let a = if b.at("reflow", default: false) and b.type == "prose" { left } else if b.type == "heading" and ha != none {
+    al(ha.at(calc.min(calc.max(b.level, 1), ha.len()) - 1))
+  } else if b.type != "heading" and ba != none { al(ba) } else { al(b.align) }
   // Lines of one block sit at the plain pitch, or the wider Vedic pitch when the block carries svaras;
   // blocks (verses) are set apart by an extra verse gap on top of that.
   let lead = (if b.vedic { S.leading_vedic } else { S.leading }) * 1em
   set par(leading: lead, spacing: lead)
-  let gap = lead + S.verse_gap * 1em
+  // A uniform-gap style sets every block apart by the same space, svara-marked or not.
+  let gap = if S.at("uniform_gap", default: false) { (S.leading + S.verse_gap) * 1em } else { lead + S.verse_gap * 1em }
   let space = if b.tight_above or b.tight_below {
     (above: if b.tight_above { lead + 0.12em } else { gap }, below: if b.tight_below { lead + 0.12em } else { gap })
   } else if b.type == "heading" { (above: lead + 1.0em, below: lead + 0.8em) } else { (above: gap, below: gap) }
@@ -248,11 +261,11 @@
       align(a, body-of(b, target, full))
       if m.lines.len() > 0 {
         set par(leading: S.leading * 0.62em, spacing: S.leading * 0.62em)
-        block(above: 0.55em, below: 0pt, inset: (left: 1.2em), text(size: 0.86em, style: "italic", styled(mf, join-lines(m.lines))))
+        block(above: 0.55em, below: 0pt, inset: (left: 1.2em), text(size: S.at("meaning_size", default: 0.86) * 1em, style: "italic", styled(mf, join-lines(m.lines))))
       }
       if m.gloss.len() > 0 {
         set par(leading: S.leading * 0.55em)
-        block(above: 0.5em, below: 0pt, inset: (left: 1.2em), text(size: 0.78em, styled(mf,
+        block(above: 0.5em, below: 0pt, inset: (left: 1.2em), text(size: S.at("gloss_size", default: 0.78) * 1em, styled(mf,
           m.gloss.map(g => [#text(style: "italic", g.at(0)) — #g.at(1)]).join([; ]))))
       }
     })

@@ -473,3 +473,37 @@ def test_sanskrit_running_header_is_not_sent():
     page = Page(page=1, blocks=[Block(id="b1", type="running_header", lang="sa", lines=["श्री गुरुभ्यो नमः"]),
                                 Block(id="b2", type="running_header", lang="te", lines=["సంధ్య"])])
     assert [b["id"] for b in tl.page_payload(page)["blocks"]] == ["b2"]
+
+
+def test_translated_style_is_one_type_scale():
+    s = STYLE_TRANSLATED
+    assert s["uniform_scale"] and s["uniform_gap"] and s["body_align"] == "left" and not s["justify"]
+    assert s["heading_sizes"] == [1.4, 1.12] and s["heading_align"] == ["center", "left"]
+    assert round(s["size"] * s["meaning_size"]) == 11 and round(s["size"] * s["gloss_size"]) == 10
+
+
+def test_render_of_translated_edition_uses_one_family_at_fixed_sizes(tmp_path):
+    cfg = setup_out(tmp_path)
+    tl.translate_master(cfg, backend=FakeClaude())
+    pdf = pipeline.render_from_master(cfg.out_dir, "iast", translation="en")
+    body = {}
+    with pymupdf.open(pdf) as doc:
+        for page in doc:
+            for blk in page.get_text("dict")["blocks"]:
+                for line in blk.get("lines", []):
+                    for span in line["spans"]:
+                        # The fake's "translations" echo their Indic input: only Latin text is checked here.
+                        latin = all(ord(c) < 0x0900 for c in span["text"])
+                        if span["text"].strip() and "src p" not in span["text"] and latin:
+                            body.setdefault(round(span["size"], 1), set()).add(span["font"].split("+")[-1])
+    # 12pt body and mantras: every Latin font at its true size, not scaled down to sit beside Indic text.
+    assert 12.0 in body and all(f.startswith("NotoSerif") for fonts in body.values() for f in fonts)
+
+
+def test_roman_edition_turns_copied_dandas_into_pipes():
+    m = deva_master()
+    tr = Translation(lang="en", mantra_script="iast", pages={2: PageTranslation(
+        key="k", source=tl.source_hash(tl.page_payload(m.page(2))),
+        blocks={"b1": BlockTranslation(lines=["say “tat savitur। bhargo॥”"])})})
+    out, _, _, _ = tl.apply_translation(m, transliterate.transliterate_master(m, "iast"), tr)
+    assert out.page(2).block("b1").lines == ["say “tat savitur| bhargo||”"]

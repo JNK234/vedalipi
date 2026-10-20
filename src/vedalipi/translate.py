@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from . import transliterate
 from .ocr.parse import extract_json
 from .schema import (
     Block,
@@ -315,6 +316,10 @@ def stale_pages(master: Master, tr: Translation, cfg: TranslateConfig) -> list[i
     return sorted(out)
 
 
+def _roman_dandas(text: str) -> str:
+    return text.replace("॥", "||").replace("।", "|")
+
+
 def apply_translation(
     master: Master, target: Master, tr: Translation
 ) -> tuple[Master, dict[tuple[int, str], BlockTranslation], list[tuple[int, str]], list[int]]:
@@ -328,6 +333,15 @@ def apply_translation(
     """
     out = target.model_copy(deep=True)
     by_number = {p.page: p for p in master.pages}
+    if transliterate.is_roman(tr.mantra_script):
+        # The model sometimes copies Devanagari dandas into a quoted roman mantra; roman text writes | and ||.
+        tr = tr.model_copy(deep=True)
+        for pt in tr.pages.values():
+            for bt in pt.blocks.values():
+                bt.lines = [_roman_dandas(x) for x in bt.lines]
+                bt.rows = [[_roman_dandas(c) for c in r] for r in bt.rows] if bt.rows is not None else None
+                bt.labels = [_roman_dandas(x) for x in bt.labels] if bt.labels is not None else None
+                bt.gloss = [[_roman_dandas(x) for x in g] for g in bt.gloss] if bt.gloss is not None else None
     meanings: dict[tuple[int, str], BlockTranslation] = {}
     missing: list[tuple[int, str]] = []
     stale: list[int] = []

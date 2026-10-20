@@ -35,9 +35,25 @@ STYLE = {
     "min_size": 16.74,  # pt
 }
 STYLE_SIDE_BY_SIDE = {**STYLE, "size": 11.5, "min_size": 8.25, "margin_left": 54, "margin_right": 54}
-# A translated edition reads like a book in its own language: body size of a printed English manual, and
-# romanized mantra lines (longer than their Indic originals) may shrink a little before they wrap.
-STYLE_TRANSLATED = {**STYLE, "size": 13, "min_size": 11}
+# A translated edition reads like a book in its own language, in one type scale throughout: 12pt body and
+# mantras, every font at its true size (no mixed-script evening out), meanings 11pt italic, glosses 10pt,
+# chapter titles (OCR level 1) centred and every other heading one size, left; one gap between all blocks;
+# body text left-aligned with even word spacing (no hyphenation, so justified lines would gape).
+# Romanized mantra lines (longer than their Indic originals) may shrink a little before they wrap.
+STYLE_TRANSLATED = {
+    **STYLE,
+    "size": 12,
+    "min_size": 10.5,
+    "uniform_scale": True,
+    "leading_vedic": 0.35,  # Latin svara marks are small: less room above and below than Indic stacks need
+    "uniform_gap": True,
+    "heading_sizes": [1.4, 1.12],
+    "heading_align": ["center", "left"],
+    "meaning_size": 11 / 12,
+    "gloss_size": 10 / 12,
+    "body_align": "left",
+    "justify": False,
+}
 
 # Vedic accents and their stand-ins: a block carrying any of them gets the wider Vedic line pitch.
 SVARA_RE = re.compile("[\u0951\u0952\u1CD0-\u1CFF\uA8E0-\uA8F3\u030D\u030E\u0331]")  # last three: roman svaras
