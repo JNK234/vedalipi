@@ -1,0 +1,1632 @@
+{
+ "input_path": "sandhya-source.pdf",
+ "input_hash": "1c5abdc2dfb19a59f1f555a33e0250f1b96e455732b7ae8b24a36203b2248533",
+ "input_kind": "pdf",
+ "num_pages": 28,
+ "pages": {
+  "21": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "967659af3b14e7790cbbd419c2a70874574d3626ee62f4a00c77353dedd134a6",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:20:29+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "bdebf188f05be9b6e0ffe70e01d6bb8b6ac03ec368837fbbe96c04aa6d5e5952",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:20:30+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "38a5ee7082fca1c9b23e0426b8626a8e28460581517382ffeba610d18a9640f7",
+    "cost_usd": 0.1348364,
+    "spent_usd": 0.1348364,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:08+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "a2c4b5cebd99c96a514ea24d172897523570f6ef55e6c6c29b8470ce3e4c58d3",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:08+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "1f70dac9c868e995da31bcc98cea7412666d0e3e8fea773d581cb40ebd60ec69",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:08+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "8ce31daec81dca3237fa3b783dffe096ea87c591f6164225716901ecd21013f3",
+    "cost_usd": 0.056006600000000004,
+    "spent_usd": 0.15457880000000002,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:21+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "16628b4863d7e63d38a08758aa7028dafba4ad4723c0ecb4b1744780e7570d99",
+    "cost_usd": 0.10209379999999998,
+    "spent_usd": 0.10209379999999998,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:49+00:00"
+   }
+  },
+  "7": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "c18a1a48c890515fe6c6dee3a3fe5a74e218e103e09f447be3539631e9c03065",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:20:29+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "6eccb6b797aba57e224bd07786f79cf5aa7945394ca58f9cde703cb9beba65bc",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:20:29+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "112dac975d6aed4e083a35f883f542bdf532de7a1e7b01654bbb2c9edd3e0cb4",
+    "cost_usd": 0.19844560000000003,
+    "spent_usd": 0.19844560000000003,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:29+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "dab2db963cee8a7a53d43eaff54b1eab4e432dc2a796a4eb0d8f617d83303026",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:29+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "c73f0ca127a6f6203dd8fad8f8061a04580ede962713e47086a8fb8fea15693e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:29+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "6dcc10e4a853d789404acaa141365bd4b3dc840fb40d9a1630ef09ab3cce6a98",
+    "cost_usd": 0.0451066,
+    "spent_usd": 0.1389068,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:38+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "d476f3ea3c328294a3f6df2c0578a9931df19bbbfe6f5b7986b2e90c83b60bee",
+    "cost_usd": 0.09873599999999999,
+    "spent_usd": 0.19668,
+    "error": null,
+    "updated_at": "2026-10-20T20:13:01+00:00"
+   }
+  },
+  "2": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "faf6dd0cf2034d62f05d16ca72565a38840a19af1b68d555a498100c5e3e7333",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:20:29+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "7fffbedc20e314cd7e862feeba35feca342378a5b323dfc46dd8b742b6ab5f7c",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:20:29+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "707b1b37d293bbef1587f4b1d42c4f4e0e3c4c25025ac0bf373f85c9e437a00e",
+    "cost_usd": 0.18307360000000003,
+    "spent_usd": 0.18307360000000003,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:16+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "2061997f10f885b0678697304cbe8699ebb7046ec57dd84dbf7fc8260ce9480a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:16+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "f220fafd8d9176e9cb341741e6cb8050ee04b42d0b772cc1c2c21fa616c60538",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:21:16+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "be3b983d73ee18547c29474a334279737f31a5cd1604134c3a294efea4acff31",
+    "cost_usd": 0.0478146,
+    "spent_usd": 0.1546068,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:22+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "69dc8f02b7d25bffc1af0846210edf15651c30e1dff80e26cefb427f4c8ffeef",
+    "cost_usd": 0.11928399999999999,
+    "spent_usd": 0.246832,
+    "error": null,
+    "updated_at": "2026-10-20T20:13:04+00:00"
+   }
+  },
+  "1": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "c792fc322b30d3afcea002e62f21632b8d5e1310c87b7800c3e14ca218b5bdcf",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:12+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "f3bcb30200a9ee4d4941b28831c16bd711cc43f83d933dcdd5534f7d1723056d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:12+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "9803ba1bdfd9cfa0f35a7d4ce75eb61b4003e17c144d6734a13fcc711cb0efac",
+    "cost_usd": 0.1345404,
+    "spent_usd": 0.1345404,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:44+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "d5549e8156a164e15c7e9cdd869fcb44895c0dc2b91194bdb6d71ff511c8ad2a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:44+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "9ca9c8fa7241cb5c3890db29060a2b00a802c7441c6bf164320358352c74a773",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:44+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "499ba3d051291063aa6d7293d0107e9a8d4d0b6c0f14787ef4db79ef58ba2b9e",
+    "cost_usd": 0.0396106,
+    "spent_usd": 0.0787428,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:19+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "dbbcd83b986062484f21573a49a15688895b77882318c71e7c4e9014b8bb2a52",
+    "cost_usd": 0.0745378,
+    "spent_usd": 0.0745378,
+    "error": null,
+    "updated_at": "2026-10-20T20:13:49+00:00"
+   }
+  },
+  "3": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "657c4907ad18a048a71acf0c2571c8485a2e6a691d61ba7801554d1e14349062",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:16+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "db5da88266ff8dd7c562f1e91c7d6b682c904439aaaddeb7e0932628295b9927",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:16+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "c3ec3691f23ba111e246aac562fc910c858d405cacaa6c0b25790fa3a9ee3fc8",
+    "cost_usd": 0.1063524,
+    "spent_usd": 0.1063524,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:38+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "ea829942bc42fc337abc915394e5138d82fc21ddd97c6e88d07d56897336d671",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:38+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "10ffb2422b845fcccf082c2af8ad742035b4fbb5b170230b69f8157aad861f2a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:38+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "c2f648932e7b73a4d320a556e43e2afe73c12dd6958fab2db053041ea0aa7462",
+    "cost_usd": 0.0256706,
+    "spent_usd": 0.0517628,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:15+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "700c1781c8aa48a4bd83c72c564d2c24c4d212d907ade30731de65d87cbcc669",
+    "cost_usd": 0.04556980000000001,
+    "spent_usd": 0.04556980000000001,
+    "error": null,
+    "updated_at": "2026-10-20T20:13:40+00:00"
+   }
+  },
+  "4": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "f7b230b7cf910bd9692681e23f3b2ef7bcf95cc95e4726f0c0d8c2b4b146b82b",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:16+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "17565d4530d25215a17ee7a6bc61aea1571606715bdf752bb96b34b74875492a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:16+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "486edab928eedbcb1d996441bc313164edb2bff10f790b70a97f437094391b7f",
+    "cost_usd": 0.13149639999999999,
+    "spent_usd": 0.13149639999999999,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:48+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "e7e08f970ccca0070c9815212de3014bf9d03e28bfb20c8dc846ec93d786d2e2",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:48+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "59c69f4d2d7e9b5f97df8eb22221e2faa9c362a5d26ceb3d25045fc663330302",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:48+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "ec5692e5a4701d89d511f6dd82843e2df729d14145bf01dbb40bb3ac3e35735d",
+    "cost_usd": 0.043186600000000006,
+    "spent_usd": 0.0792708,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:24+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "a51200a269014b5036390199a760b7b71855c7584ae6a7830196af574c8d4b08",
+    "cost_usd": 0.0697538,
+    "spent_usd": 0.0697538,
+    "error": null,
+    "updated_at": "2026-10-20T20:13:52+00:00"
+   }
+  },
+  "5": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "1e0aa6f4f7edb011f61d702a15ed90af6493d4162fcfedbfd7c91d5eec025d8d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:22+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "d6e40858da521026cc218bcaa2e4d643b255c3979ac7e40d4e5699cea0ed4db0",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:22+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "668179381c501200cd1d6f3b00c928d65148d4ab9dfeeea131d5cac03ebf2434",
+    "cost_usd": 0.1636164,
+    "spent_usd": 0.1636164,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:13+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "683819555642a6a3ed068e6fb5295dfbc370ba43d0edd5db5c1eaa6e21b3e97a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:13+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "598e4f195b1bf62ac77b1e350868eba115e6d58be4221e56dd33c3d889aaa1d7",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:13+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "1c21d595f17349495eee3ef9f6ea4ff928e339bf7653776dfc7169971fc8840c",
+    "cost_usd": 0.058762600000000005,
+    "spent_usd": 0.1150148,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:35+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "d0580fd41e8949f948bd36bd91a7a1a502289b961dde4260c8954711c1cbd0fe",
+    "cost_usd": 0.13500979999999999,
+    "spent_usd": 0.13500979999999999,
+    "error": null,
+    "updated_at": "2026-10-20T20:14:17+00:00"
+   }
+  },
+  "6": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "30de709523bc1cb014b7799c09b877a65b1c438895d8b5f36a4187e9d1e1176f",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:32+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "25714fb8dc4b8de24e9d294e439dfc99e239f58127df64097117a4f44b1f4d2a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:32+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "cc1e44cdf2fddb8ecea96cf07a8ee748fab30a385fefbfc585068bb8662cf7ac",
+    "cost_usd": 0.16471639999999999,
+    "spent_usd": 0.16471639999999999,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:23+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "6c26becf7bfd25035192252fc17c6e691df3084ac14dfc70f84e5c29da766d36",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:23+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "ca28c8cbe36e16a6b007cc5cbae6c2366a67c4d75069de7d87f9c1cea3407eb4",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:23+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "f6eb567dce75adfdf2ab1fa6f2e1b6c0bce46a040806ac4134ce8a03502ac2d1",
+    "cost_usd": 0.0575586,
+    "spent_usd": 0.1154188,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:38+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "8adf62d903f98d07098635ecb3ed197aead1d6e5913f8bd5b949f6557cba2308",
+    "cost_usd": 0.11652979999999999,
+    "spent_usd": 0.11652979999999999,
+    "error": null,
+    "updated_at": "2026-10-20T20:14:19+00:00"
+   }
+  },
+  "8": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "e5ecc69d8c4d461fc77810db20a86145856ea1c48fba75e65275491b7b98f1ad",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:38+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "f8a071649cc11ef0e38e43a9c6f3be3df90928a613df259d5fcdf8a5cf05c37a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:39+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "caa239822f4c7f85ee8086ce17e96fc5be5b513607294f761c09abb214a68268",
+    "cost_usd": 0.2008684,
+    "spent_usd": 0.2008684,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:51+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "383f64ddc115c43f577e7466c7d52b5bdf03992cf7b7f6abaf1c5dbc9072cee1",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:51+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "8c53789755411d9f4c66a5c1f2337bd86b52827c53d78fa75c35b31be130c767",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:51+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "dbeb0ff6bdde1f2d5bce264f77c57ab84d0d50e4830ddc497c82d94de86dfa3a",
+    "cost_usd": 0.05104260000000001,
+    "spent_usd": 0.0965588,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:41+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "a999c725b86fcd4a853323cc4b28e36a648389aae001df95bf28f2a7374d069c",
+    "cost_usd": 0.0901858,
+    "spent_usd": 0.0901858,
+    "error": null,
+    "updated_at": "2026-10-20T20:14:20+00:00"
+   }
+  },
+  "9": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "dec0aec06586045e0b81e377eb10ba47c17c5f1ad0365fbd17642bc430c637c9",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:39+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "354ad0c339ba1def2328ca0df623b28f907258e4bf6ea3eeb280d83b64104a4e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:39+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "8dbcde3c338074ee911f57d220925d4d7056180b51e8b57d7dd65c6b5e363c81",
+    "cost_usd": 0.16624440000000001,
+    "spent_usd": 0.16624440000000001,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:35+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "0f80b30446573e88977271786e71f9ae822ffb3c0b84e8dd8d1941579bc98f93",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:35+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "6bdf998adf4834d9b2d0898c6bd0ff2b5309cf60ebe30ad1a1cc507600565557",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:35+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "d92e50b8c7f632a808b2a0be2eecf58a64faa1695e4d3f9ce2e490a16614a94d",
+    "cost_usd": 0.0538186,
+    "spent_usd": 0.11133080000000001,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:43+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "28e4ad73c828cf0c4d8da1f771b9d466a4edff45ae63cbb5ac0d432e33a3986e",
+    "cost_usd": 0.1203778,
+    "spent_usd": 0.1203778,
+    "error": null,
+    "updated_at": "2026-10-20T20:14:33+00:00"
+   }
+  },
+  "10": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "5c130b5ab3c407e8ee10c9e05fd4b0f1c15ef4bc3c84a54ca58d4623df938b0e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:44+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "1405e062976d3ed541f12fbcf6f56e80e8a9473cc27fb9cc35c7913749823c3d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:44+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "270de981170c36cd2824097248535bfb250dd991c6500e132fc4c457aaaf9a7b",
+    "cost_usd": 0.20228839999999998,
+    "spent_usd": 0.20228839999999998,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:55+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "a6f362d73f5df917c1cc49cae1b7c55135bff7ba34e6cd41a456a2a58f38ae6e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:55+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "fc69df18e77e41dfcbb8fba4035f7e75ea792475e6f47fa2f4346a09906befd2",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:55+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "feb0eaa980c2a4421aeee7f7f7c61636c8ecadaf7a7de1426389965795548ed2",
+    "cost_usd": 0.0541426,
+    "spent_usd": 0.1016788,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:43+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "73dba511824172622f6af5c6fc8253ce8f1cb8a4170d9550ae24447df97f5daa",
+    "cost_usd": 0.11990979999999998,
+    "spent_usd": 0.11990979999999998,
+    "error": null,
+    "updated_at": "2026-10-20T20:14:33+00:00"
+   }
+  },
+  "11": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "bc320a290473e3a57dc110869fe029e3ed621ae2dc3ac386f1eb94dcbd59c671",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:48+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "d8a46dfdeb839e59afe64c5fdc669bfe86e5abc2d276f94c5d4aba66a926576c",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:33:48+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "5e1085e4fe7a71fd1fab16163b229f857f9ff4a8717b7ee839c60441cf5e0df2",
+    "cost_usd": 0.1429484,
+    "spent_usd": 0.1429484,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:25+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "ea86b3890fce1f786d6154794c709690b9a1a8572c6396906d2717c558dfca7a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:25+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "fb8926c035223e07fd24bee1665f5a4f323926dcfa7f381d78a9848ee0ee7080",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:25+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "c446d85aaaacc0a81f6b9ae21d86161fb15a6c869a31827a37c88fb316ebaf78",
+    "cost_usd": 0.0576186,
+    "spent_usd": 0.1058588,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:55+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "7167a74fe4233690f6c507474dcf25ccd783b7c254ca0a94a717706c3311cdd1",
+    "cost_usd": 0.13061779999999998,
+    "spent_usd": 0.13061779999999998,
+    "error": null,
+    "updated_at": "2026-10-20T20:14:53+00:00"
+   }
+  },
+  "12": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "ea8742dab96e212ce21ff4e6db767d045f4b0f73d2a01967820f0cbdc2cc3a73",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:13+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "9dc899b1ab70a3e46afe3041ca90dbe0e71977b1863f79d27fe76132f5112740",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:13+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "9614d0435d0ebc0e0556baf12423d4a7a1f862d66f191aa3924bb5dd5b590c5c",
+    "cost_usd": 0.15803240000000002,
+    "spent_usd": 0.15803240000000002,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:54+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "b0799a0a4781e9dac675021984d63d931559c0f1e749e4601b916c606ec9b249",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:54+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "c4ec1606255185f318c89d53f00aa6b670138cfe91ec9f6960a5f3d83b25ddc7",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:54+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "24f0262bbff161fa45cf69ae2015c7d665f40033249ebbddd51d5e670ecc02f4",
+    "cost_usd": 0.0769426,
+    "spent_usd": 0.1485148,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:03+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "b48312d3b2b18776dd26b93862539b76828d58f03372f9cef65b48657b9b4f66",
+    "cost_usd": 0.1867978,
+    "spent_usd": 0.1867978,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:27+00:00"
+   }
+  },
+  "13": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "7af1d7a7f829c190df93f4f7fcdf19ce272ed41e84727711922634676321c946",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:23+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "438929d32531c5fdbc4f95357fb65119ba1a16d66ad0fd8f55b4e8cc670de52e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:23+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "85ab2dfe222c3ba6cdb6f29ee9b7749cced6fad2fa47a3d34d0a62b3eec5122a",
+    "cost_usd": 0.2106924,
+    "spent_usd": 0.2106924,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:41+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "09f5f5115e96e8c79f1124b3373e06e6b490def8f97d9a3390fe47a123415664",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:41+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "b7bdac943f0e05eb74eda25b26c32d0463ee19731c54249cb3081c443f6505a9",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:41+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "138627973b7cbd72e104ce587c4412ab2689663565223bde960edd04a4f4eab9",
+    "cost_usd": 0.07154260000000001,
+    "spent_usd": 0.14181880000000002,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:01+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "750ba0353141c9a17ab44e4c4bcad8d24b449772d3ff3dc99ba2977632e06290",
+    "cost_usd": 0.1342778,
+    "spent_usd": 0.1342778,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:07+00:00"
+   }
+  },
+  "14": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "937b03e87bafd736e4c6403ff85aebb5fad4b9dba4a5103fc9c7d942be3d9e4c",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:25+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "49fcda895a17d7805aacbbf7009734f041f35719bd7cbc20f2fc17b42a0e2d01",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:26+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "0bc27ef4f872747bc7ba5afa3a97ef57fe412feac88be9ca3aee30fa4e3acb9f",
+    "cost_usd": 0.17913240000000002,
+    "spent_usd": 0.17913240000000002,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:19+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "bcce34e44bd2769fb6902a5df16026dd66f06c6d6f4b7ad31c0ae72391b7dde0",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:19+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "f380afa7483ff71e3a99f2ac26b2dbbf2ead004143b58a4690dfe57a3a2b7ee8",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:19+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "d9415dd77f6c80e5e3a29549a956d0de68b7d5a6b240769b3e2c2c2cc842abea",
+    "cost_usd": 0.05688259999999999,
+    "spent_usd": 0.11199479999999999,
+    "error": null,
+    "updated_at": "2026-10-20T20:04:59+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "8342e58392ef7b1a9168402930fe8c1ea9d39bc39f54a75ece06a659be3376ea",
+    "cost_usd": 0.1391618,
+    "spent_usd": 0.1391618,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:07+00:00"
+   }
+  },
+  "15": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "2876ab4605536f8fe77108fa182b81141d3f01e7f267706360bf33198c1e00b4",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:35+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "7e9aecf0ee027f1e625f1223f4260850a45f0b7ca72c22cd5aa2617bd230600e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:35+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "68b7e89e35117c4fc6fd86c6e175aa41539b9aa6391363c0a2533804cfe13aef",
+    "cost_usd": 0.1520764,
+    "spent_usd": 0.1520764,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:18+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "b792ccc8422b3deabc55a41a38f8c1daa6979ea052911296b480407d1e2e15a5",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:18+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "cc53eae38152298df458c228e3a26ad5e5ac307d4032fc8a990f904054523ac7",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:18+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "edcef06291be19c2474098a61f776fd19fd29d96b675468cee7cea2d2f4a8a29",
+    "cost_usd": 0.0583586,
+    "spent_usd": 0.11501879999999999,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:02+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "ce55807f9d377cb6e031df5f9785a1fb5b97056dfaa9457d472cad31435992f4",
+    "cost_usd": 0.1236858,
+    "spent_usd": 0.1236858,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:16+00:00"
+   }
+  },
+  "16": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "b8e628ebd2325afa937831d03b74d0e408ec3b75002f2f120a3b2d1769940907",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:51+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "282dd0279866abe5204bace54a3720609fce4b665dfe94763c299239c51444d2",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:52+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "62c9fbb8fd00ccfc425d348422deaf48d5f9d403b4d4044aeb4e8b72d1abc97e",
+    "cost_usd": 0.2348164,
+    "spent_usd": 0.2348164,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:18+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "d56a58c31d990442e228762a0e5afbf5b430dce3522af93649ee0cd2f0ca3838",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:18+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "b5ed64dfb5359827139f04db1be8911d29526f7998918c1e8a69c612d1e643c4",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:18+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "4f2f0bb4c390af26c399ece6900f0217ca415e05ed474973ebc6f16fb4d00cad",
+    "cost_usd": 0.0579546,
+    "spent_usd": 0.12260280000000001,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:00+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "92a04b5aee93966e80a166124f8f58911b3b129b607a8f5177c037f0e40d3905",
+    "cost_usd": 0.1287818,
+    "spent_usd": 0.1287818,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:17+00:00"
+   }
+  },
+  "17": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "94a342f0c4f7f3433588362562a29179e5d71852bb4f2c88dfec8eff97159b9d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:54+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "36d4b180b21a359ffa624606c47713e1c9a2fedc9657e40e3a3c80ee27ac4790",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:55+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "685e7e613de0ca90c2234c67d5e488d75524db934dac573104a3e87fc0831106",
+    "cost_usd": 0.26760839999999997,
+    "spent_usd": 0.26760839999999997,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:43+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "23977e968bc33e6a5fa12c1b2793156e257ba346cb21f9374e21ede9b19e6f0d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:43+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "ceaa6acda52593c4f38321e671e940eb818dc47ad53f13f0c5466e9f9988747f",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:43+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "30791199bd3022caaf3bdc496d8145ef43a309b735d579e23e499fc9b8104846",
+    "cost_usd": 0.050914600000000004,
+    "spent_usd": 0.0948588,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:12+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "eccce190130c41c8f9e1ae66e2bc22826b9f95cffba212e9465d2801fbb10874",
+    "cost_usd": 0.0953898,
+    "spent_usd": 0.0953898,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:26+00:00"
+   }
+  },
+  "18": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "38c15732cf5fc3d69844674c4b569225dc1a69c6499af3bf364063d7f864f27d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:55+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "4cb97e5eba1d01cca4ad2e631c563140912be67fc68c0ebf715f14420680d6ee",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:34:56+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "263022ab208f85304fe74435f4eac91b3f3cd2e76561deacddd19e4adf4180d8",
+    "cost_usd": 0.2212364,
+    "spent_usd": 0.2212364,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:17+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "d0331be0ed94fb8c014653770d06b56a136cc5dbaf20955c0556b0243b4e4c08",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:17+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "81efbe312d55beb883f24b9c4ab68784ee15f4d3441b710124c6c9c9becc87de",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:17+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "4855cd6da85c67cb939d42b43872c73057b12d88d8dae135526b523f97b9819d",
+    "cost_usd": 0.0346706,
+    "spent_usd": 0.0782068,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:07+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "11b3d1f2622acc9cffeb37b7dd41950e601013b47e280cd81e519927ac96dcca",
+    "cost_usd": 0.09788579999999998,
+    "spent_usd": 0.09788579999999998,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:40+00:00"
+   }
+  },
+  "19": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "1c1338d9849b79fe662c1c54773a1fcc3c8786c4baade82094cc3cfb636b01da",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:18+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "93ff7c1be9846b93fa23f11ccc8cae7b6c2e2639d2c0a748bc92f3a0b735b70a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:19+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "027ff8105e3b0ea1fc9af55da82c1cac162eb628cd9f477ba62e7f688671b47b",
+    "cost_usd": 0.1515204,
+    "spent_usd": 0.1515204,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:07+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "6dab86a3df2591c79b62f810621eddde6f400571a0132911780339e8ffddb5f0",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:07+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "4f9259f564c4f51576357a5ccc4667cb8f03720d5040059837e7ff8e897e1212",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:07+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "624144d92432fe5bbf075568f6979ab9f212edc524bb7d7d871d575f76e6a05f",
+    "cost_usd": 0.0408386,
+    "spent_usd": 0.08578279999999999,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:09+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "7e846eb9344ebf715406c1cc630d98095f4f3fea1f4954bc108a982b4cef2410",
+    "cost_usd": 0.12202979999999998,
+    "spent_usd": 0.12202979999999998,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:46+00:00"
+   }
+  },
+  "20": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "2e97d87d578337acefe38f5820aaea12b0398a9577f9220c387ecdb30a21293e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:19+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "01226715d76dd231ec94ab07d6edb94fe42e1f9915a191ff26b03aa07dd2661f",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:19+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "6ea3566d77f47cc8018292d7ab60357954930d6b8f8aae4b5e42d2ed8690b165",
+    "cost_usd": 0.1411324,
+    "spent_usd": 0.1411324,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:57+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "39da90e0c894dce51a9a6999b9b8480b3e909f14004532372f08385361bcd164",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:57+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "0db8cae9442282e30c5493871bcde033cdf263bc5981e3ae1af96655a02375b3",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:57+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "7170bb1d7c1ed5a0203c7c42c43a76dd2ee2d29e71008a94bb32cf4527139e9e",
+    "cost_usd": 0.0573266,
+    "spent_usd": 0.1106348,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:21+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "ca3474fc13b15a8b47ad441455c7cceb1494e05d71139934ddc6c03619710be6",
+    "cost_usd": 0.0986658,
+    "spent_usd": 0.0986658,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:49+00:00"
+   }
+  },
+  "22": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "4c5bb64538bdcb8fed856d8c2c49577c53e6aa1ea4259a5a46f0cb3e81e7322d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:41+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "850ebe70dd33a197ff730a4857f9b2d6e8c8e12f67214164196823c2399ad821",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:41+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "135e7667c1fded3c7b44a2417e76e49a813b1cf9d6e16787ec6cc72342a848f8",
+    "cost_usd": 0.13802840000000002,
+    "spent_usd": 0.13802840000000002,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:25+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "d6a2a458d4fedde648e7afc9eab272abc0390d9da8ebb9134129971faba36089",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:25+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "5dc80cac9763f6ac23febf7fb644c3bdeb3fc59affe5f7a426aa56ffda7bfd04",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:25+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "00e85a6c7d1aa3bd0912855c7da4f9796ef7075b51cb9c8802007822c2dc5077",
+    "cost_usd": 0.0365466,
+    "spent_usd": 0.0703748,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:15+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "4aa6094aa14a072adb01cc9cb4339cce4ca031908fa19d11093ffb617829f06a",
+    "cost_usd": 0.0756218,
+    "spent_usd": 0.0756218,
+    "error": null,
+    "updated_at": "2026-10-20T20:15:53+00:00"
+   }
+  },
+  "23": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "2ea00af07b4dff00376c9aaae868e4a6a8fb8b374c0a6ca666b7d47b24c637bc",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:57+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "1bd410e7345ba0ddef242aea7c2c27559e430e4d1dbbf678d2c254206b874648",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:35:57+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "0f6eb5e89d0d1422d2691f4bf51a7b7107f7bcc1fc8ee9f56a6a290788e5fb71",
+    "cost_usd": 0.17380040000000002,
+    "spent_usd": 0.17380040000000002,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:54+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "fb53b50f948dca9f130fd9137e415c679136522f2e546667f32a0943c6c15f22",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:54+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "acc4053e858466217b27ae53cc2eb0d96b6ddaaafa060ab72277b055f4a13a1e",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:54+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "2a6bd8fd3fbbdeadaed9639b8f390995154add233c6814b6bd54a6f2cda73daa",
+    "cost_usd": 0.0565706,
+    "spent_usd": 0.1006268,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:27+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "5ee050eaf5dd6ad17f43bcdbd03835d90c0a5be33c018f5f646b8b807a187b9f",
+    "cost_usd": 0.11630180000000001,
+    "spent_usd": 0.11630180000000001,
+    "error": null,
+    "updated_at": "2026-10-20T20:16:06+00:00"
+   }
+  },
+  "24": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "d91e442d5e32280c8d5b3cabfc8ecf79630156bd2d014ad5197c2a0dfee417b3",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:07+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "869767232135d3967c7307308ddf8e24cfe7e78ba87299384071fec58cb14809",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:08+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "d6f30cede4ca0f7398ffff4483ced3f313e1b2ed7c8993e326d3076fb7919e53",
+    "cost_usd": 0.21373240000000002,
+    "spent_usd": 0.21373240000000002,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:24+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "4956da90e6154200525bc518157bf4baae5dd7f0808d7abebb33f52ccf807f31",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:24+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "a25d4e887524ee697a4e530025ec323858b7ba441a0cbf03cc97298c5411ba2d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:24+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "97350109cf6b402799dceefc2681c5b25e01c302034f69a775e033906e71a110",
+    "cost_usd": 0.0583066,
+    "spent_usd": 0.1125148,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:28+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "0b522832fc214ce58182933f7ffdfb54ef590a665d941b4d2a4d776e6ca73110",
+    "cost_usd": 0.12564979999999998,
+    "spent_usd": 0.12564979999999998,
+    "error": null,
+    "updated_at": "2026-10-20T20:16:22+00:00"
+   }
+  },
+  "25": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "4ff329b243ca6fe1ac589b7b9847117fb04b4ccde5a4d25ffba3d945a3ef9907",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:17+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "c27e1d47f9658612f5723a63b58adfd012e2fa881007ab70ba51e7f071903cd8",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:17+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "4ecf149ea855063fd4f206198579bbca202d9b855e3e87a659f24548fe161d2c",
+    "cost_usd": 0.20477240000000002,
+    "spent_usd": 0.20477240000000002,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:32+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "afce20bfde6529e5dbf1a5e28cc7ed17338ce8cbe0f88876beab7ab774eb24b7",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:32+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "376492d122989c2c32daf21e24acaf87abd9a86ade3d8e4ec7a066d6a4c4e05a",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:32+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "6a0af6861e5751b90f779eec1a4577f79916afe02bf63545ab526ea4675f08a7",
+    "cost_usd": 0.0494546,
+    "spent_usd": 0.0947028,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:37+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "25bab16b1908d3fa034c2ec0a18c5e3205dc9baa6da0796ff3e2d5d08d105b79",
+    "cost_usd": 0.0781338,
+    "spent_usd": 0.0781338,
+    "error": null,
+    "updated_at": "2026-10-20T20:16:14+00:00"
+   }
+  },
+  "26": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "6b2566a18ac9de3f80c4ee3ab8b428a88510a64195f83787bf4af3540b5d8c26",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:18+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "5f428088ed6c2a7667d6711024cb7c76d1d4ca7cae897c9f0c0e44c63a85d3a8",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:18+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "cca2643c2cdc09eef591b114229248b8f4c180bbfe65ff582370b85edb9c02d8",
+    "cost_usd": 0.2026124,
+    "spent_usd": 0.2026124,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:34+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "a998f74ddc7b8d5fefcbb8cb20efffd02087f1fcfdf82cb3a44f7820106d1b6b",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:34+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "54904ad83917ee793088fa0008774f54cb65eff865989fc6097585056baffecd",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:34+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "9b3e5e6d2ea431bde61067ef4b9cfadec66c325185a92fa43d54bcd30e4a937b",
+    "cost_usd": 0.049878599999999995,
+    "spent_usd": 0.0917388,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:32+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "b7a2c2c63adf86a1ed46587c0f0a486a7977a9f4f586a933ca5210a818502075",
+    "cost_usd": 0.0972378,
+    "spent_usd": 0.0972378,
+    "error": null,
+    "updated_at": "2026-10-20T20:16:20+00:00"
+   }
+  },
+  "27": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "2b83273f6d651cc21a68badfb57625d92865bcf2619c0eb5dda11bc1d9a4b8f4",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:25+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "bd2097f0918419fd18bfd718d540d9ad9565099eb6918b878c6124b27ba09da3",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:25+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "ac048363d86c780e2b6e4f743c9e43a5e36a8ab90c7f84381da694a516a85910",
+    "cost_usd": 0.13957239999999999,
+    "spent_usd": 0.13957239999999999,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:59+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "2d0f48521a759121c08a51a75274f3cead5ba3ad5bbe807974752ec337136a3b",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:59+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "ccfb29b030bd3da114bd7884563b29e5583c77ae27551aabe822eac3591445c4",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:59+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "3791c536da6eead3272d3891f20fd42f64c965866f3c6a5b046c2e5b8a2d5fda",
+    "cost_usd": 0.047542600000000004,
+    "spent_usd": 0.08194280000000001,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:35+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "65c3db2f1ea6f2eb8c9965f8014add94b5439bf994130368c898c8e0cdd20459",
+    "cost_usd": 0.0879338,
+    "spent_usd": 0.0879338,
+    "error": null,
+    "updated_at": "2026-10-20T20:16:17+00:00"
+   }
+  },
+  "28": {
+   "ingest": {
+    "status": "done",
+    "input_hash": "1e88174ffcb5e7e47837e3a2e0bb3882b2607658aae9e9d716f42d0ab3cffb5b",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:43+00:00"
+   },
+   "preprocess": {
+    "status": "done",
+    "input_hash": "0cc6b97e8cd793b0bd837e19dc666f259c8fe958b6423c017f7d9237568f290d",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:36:43+00:00"
+   },
+   "ocr": {
+    "status": "done",
+    "input_hash": "68959dbb699537a2c8def457bfc713df22efd64cd3e09ab4daa8e80fd20deb6f",
+    "cost_usd": 0.1363684,
+    "spent_usd": 0.1363684,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:17+00:00"
+   },
+   "normalize": {
+    "status": "done",
+    "input_hash": "c007e8b836bea9e0e3ae1e137fdfe097c55211f95cd7338a49c6c6b12e0bcd60",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:17+00:00"
+   },
+   "validate": {
+    "status": "done",
+    "input_hash": "d50820403ae169388703e419012bfc87a19e27a3829235f8b83fb23bd4666729",
+    "cost_usd": 0.0,
+    "spent_usd": 0.0,
+    "error": null,
+    "updated_at": "2026-10-20T19:37:17+00:00"
+   },
+   "translate-en": {
+    "status": "done",
+    "input_hash": "3a150a4e163f1f3ba510695612c01a7f345815ef4b44a5fda98684f76da42aad",
+    "cost_usd": 0.0576026,
+    "spent_usd": 0.09889880000000001,
+    "error": null,
+    "updated_at": "2026-10-20T20:05:42+00:00"
+   },
+   "translate-kn": {
+    "status": "done",
+    "input_hash": "a867c5623c88db28dd1387c2a43b3f40979cf32b57acbf15834843a3e4d0831f",
+    "cost_usd": 0.1323418,
+    "spent_usd": 0.1323418,
+    "error": null,
+    "updated_at": "2026-10-20T20:16:38+00:00"
+   }
+  }
+ }
+}
