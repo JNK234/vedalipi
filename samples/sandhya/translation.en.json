@@ -1,0 +1,2503 @@
+{
+ "lang": "en",
+ "mantra_script": "iast",
+ "pages": {
+  "1": {
+   "key": "499ba3d051291063aa6d7293d0107e9a8d4d0b6c0f14787ef4db79ef58ba2b9e",
+   "source": "2fe756f9df319ebd1c06a89c2b5379979ee7c4a9ade857eff415025f49bcbd43",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "Sandhyāvandanam"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b5": {
+     "lines": [
+      "Since one worships at the time of junction, of night and of day,",
+      "the wise therefore call that very worship sandhyā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b8": {
+     "lines": [
+      "What is the benefit of performing sandhyāvandanam?"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    }
+   }
+  },
+  "2": {
+   "key": "be3b983d73ee18547c29474a334279737f31a5cd1604134c3a294efea4acff31",
+   "source": "27c5f50909477aa0ad97b476e09fc3fea0d2781d10368bcfcc0852d4b0700e2f",
+   "blocks": {
+    "b3": {
+     "lines": [
+      "Because it protects the one who sings it, it is called Gayatri."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b5": {
+     "lines": [
+      "Om. Earth, atmosphere and heaven.",
+      "We meditate on that most excellent radiance of the divine Savitr, the Sun,",
+      "who impels our intellects."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "oṃ",
+       "the sacred syllable, praṇava"
+      ],
+      [
+       "bhūḥ",
+       "earth"
+      ],
+      [
+       "bhuvaḥ",
+       "atmosphere"
+      ],
+      [
+       "suvaḥ",
+       "heaven"
+      ],
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitr, the Sun, the impeller"
+      ],
+      [
+       "vareṇyam",
+       "most excellent, worthy to be chosen"
+      ],
+      [
+       "bhargaḥ",
+       "radiance, splendour"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate upon"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspire"
+      ]
+     ],
+     "cue": "Recite the Gayatri mantra:"
+    }
+   }
+  },
+  "3": {
+   "key": "c2f648932e7b73a4d320a556e43e2afe73c12dd6958fab2db053041ea0aa7462",
+   "source": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "blocks": {}
+  },
+  "4": {
+   "key": "ec5692e5a4701d89d511f6dd82843e2df729d14145bf01dbb40bb3ac3e35735d",
+   "source": "45a7a4acbe190e63dec5b4d6a02db4ff7febe963ce1dbfd7ab63b0fd382d7a6e",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "May there be auspiciousness (Śrīrastu)."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b2": {
+     "lines": [
+      "Puduru Dravida Trikāla Sandhyāvandanam (the twilight worship performed at the three times of day)"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b4": {
+     "lines": [
+      "1. Salutation to Acyuta, the Imperishable One."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sip a black-gram-seed measure of water from the right palm:"
+    },
+    "b5": {
+     "lines": [
+      "2. Salutation to Ananta, the Endless One."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Again take water in the right palm and sip:"
+    },
+    "b6": {
+     "lines": [
+      "3. Salutation to Govinda."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Again take water in the right palm and sip:"
+    }
+   }
+  },
+  "5": {
+   "key": "1c21d595f17349495eee3ef9f6ea4ff928e339bf7653776dfc7169971fc8840c",
+   "source": "54d9e01481ea15b97720474806312ce1d97c3b154b1010dbb6f50b9b3215e3c4",
+   "blocks": {
+    "b6": {
+     "lines": [
+      "Whether one is impure or pure, in whatever condition one may be, whoever remembers the lotus-eyed Lord becomes pure, outside and within.",
+      "Salutation to the lotus-eyed Lord (Puṇḍarīkākṣa).",
+      "Salutation to the lotus-eyed Lord (Puṇḍarīkākṣa).",
+      "Salutation to the lotus-eyed Lord (Puṇḍarīkākṣa)."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water from the uddharaṇī (small ritual spoon) on your head:"
+    },
+    "b8": {
+     "lines": [
+      "Salutation to Acyuta.",
+      "Salutation to Ananta.",
+      "Salutation to Govinda.",
+      "Salutation to Keśava.",
+      "Salutation to Nārāyaṇa.",
+      "Salutation to Mādhava.",
+      "Salutation to Govinda.",
+      "Salutation to Viṣṇu.",
+      "Salutation to Madhusūdana.",
+      "Salutation to Trivikrama.",
+      "Salutation to Vāmana.",
+      "Salutation to Śrīdhara.",
+      "Salutation to Hṛṣīkeśa.",
+      "Salutation to Padmanābha.",
+      "Salutation to Dāmodara.",
+      "Salutation to Saṅkarṣaṇa.",
+      "Salutation to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana with these names, as described above:"
+    },
+    "b10": {
+     "lines": [
+      "The metre is Daivī Gāyatrī; it is employed in prāṇāyāma.",
+      "Om, the earth (Bhūḥ); Om, the atmosphere (Bhuvaḥ); Om, heaven (Suvaḥ); Om, the world of Mahas; Om, the world of Janas; Om, the world of Tapas; Om, the world of Satya.",
+      "Om, we meditate on that adorable radiance of the divine Savitṛ, who impels our intellects.",
+      "Om, He is the waters, the light, the essence, the immortal nectar, Brahman; He is earth, atmosphere and heaven; He is Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "om",
+       "the sacred syllable, denoting Brahman"
+      ],
+      [
+       "bhūḥ",
+       "the earth"
+      ],
+      [
+       "bhuvaḥ",
+       "the atmosphere"
+      ],
+      [
+       "suvaḥ",
+       "heaven"
+      ],
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitṛ, the impelling Sun-god"
+      ],
+      [
+       "vareṇyam",
+       "adorable, most excellent"
+      ],
+      [
+       "bhargaḥ",
+       "radiance, effulgence"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate upon"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspire"
+      ],
+      [
+       "āpaḥ",
+       "the waters"
+      ],
+      [
+       "jyotiḥ",
+       "light"
+      ],
+      [
+       "rasaḥ",
+       "essence"
+      ],
+      [
+       "amṛtam",
+       "immortal nectar"
+      ],
+      [
+       "brahma",
+       "Brahman, the Supreme"
+      ]
+     ],
+     "cue": "Recite for prāṇāyāma (breath control); then touch right ear:"
+    }
+   }
+  },
+  "6": {
+   "key": "f6eb567dce75adfdf2ab1fa6f2e1b6c0bce46a040806ac4134ce8a03502ac2d1",
+   "source": "175018de3b13634a692c8f1cacf803dcf14c1ba7cc9285a57f5e3d0c4726bf84",
+   "blocks": {
+    "b2": {
+     "lines": [
+      "Morning:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b3": {
+     "lines": [
+      "For the destruction of all the sins I have accumulated, and through that for the pleasure of Śrī Parameśvara (the Supreme Lord), I shall perform the morning Sandhyāvandana (twilight worship)."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Left palm up on right thigh, covered by right palm; then touch water:"
+    },
+    "b6": {
+     "lines": [
+      "Midday:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b7": {
+     "lines": [
+      "For the destruction of all the sins I have accumulated, and through that for the pleasure of Śrī Parameśvara (the Supreme Lord), I shall perform the midday Sandhyāvandana."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Left palm up on right thigh, covered by right palm; then touch water:"
+    },
+    "b8": {
+     "lines": [
+      "Evening:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b9": {
+     "lines": [
+      "For the destruction of all the sins I have accumulated, and through that for the pleasure of Śrī Parameśvara (the Supreme Lord), I shall perform the evening Sandhyāvandana."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Left palm up on right thigh, covered by right palm; then touch water:"
+    },
+    "b11": {
+     "lines": [
+      "Oṃ, salutations to Śrī Keśava."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Wet ring finger with uddharaṇi water; draw nāmam on face:"
+    },
+    "b13": {
+     "lines": [
+      "O Waters, you are indeed the source of happiness; so grant us strength, and the great and delightful vision of the Supreme.",
+      "Your most auspicious essence, let us share in it here, as loving mothers give to their children.",
+      "May we go fully to that essence, for whose abode you gladden us.",
+      "O Waters, make us fruitful. Oṃ bhūr bhuvas suvaḥ."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "āpaḥ",
+       "O waters"
+      ],
+      [
+       "hi",
+       "indeed"
+      ],
+      [
+       "sthā",
+       "you are"
+      ],
+      [
+       "mayobhuvaḥ",
+       "sources of happiness"
+      ],
+      [
+       "tāḥ",
+       "such as you"
+      ],
+      [
+       "naḥ",
+       "us"
+      ],
+      [
+       "ūrje",
+       "for strength / nourishment"
+      ],
+      [
+       "dadhātana",
+       "establish, grant"
+      ],
+      [
+       "mahe",
+       "great"
+      ],
+      [
+       "raṇāya",
+       "delightful"
+      ],
+      [
+       "cakṣase",
+       "for vision"
+      ],
+      [
+       "yaḥ",
+       "which"
+      ],
+      [
+       "vaḥ",
+       "your"
+      ],
+      [
+       "śivatamaḥ",
+       "most auspicious"
+      ],
+      [
+       "rasaḥ",
+       "essence"
+      ],
+      [
+       "tasya",
+       "of that"
+      ],
+      [
+       "bhājayata",
+       "make us share"
+      ],
+      [
+       "iha",
+       "here"
+      ],
+      [
+       "uśatīḥ",
+       "loving"
+      ],
+      [
+       "iva",
+       "like"
+      ],
+      [
+       "mātaraḥ",
+       "mothers"
+      ],
+      [
+       "tasmai",
+       "to that"
+      ],
+      [
+       "araṃ gamāma",
+       "may we go fully"
+      ],
+      [
+       "yasya",
+       "for whose"
+      ],
+      [
+       "kṣayāya",
+       "abode"
+      ],
+      [
+       "jinvatha",
+       "you gladden"
+      ],
+      [
+       "janayatha",
+       "make fruitful, generate"
+      ],
+      [
+       "ca",
+       "and"
+      ]
+     ],
+     "cue": "Recite:"
+    }
+   }
+  },
+  "7": {
+   "key": "6dcc10e4a853d789404acaa141365bd4b3dc840fb40d9a1630ef09ab3cce6a98",
+   "source": "0c3a98a2391f421d40dcc26895ca647f218987b594a4057099277e4a83eba5cf",
+   "blocks": {
+    "b3": {
+     "lines": [
+      "Morning:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b4": {
+     "lines": [
+      "May Sūrya, Manyu (the deity of anger), and the lords of anger protect me from the sins committed through anger.",
+      "Whatever sin I have committed during the night by mind, by speech, by the hands, by the feet, by the belly and by the organ of generation, may the deity of Night wipe it away.",
+      "Whatever evil there is in me, this, and myself, I offer as an oblation into the Sun, the light, the source of immortality. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Pour water in palm to cover a black-gram seed; recite, sip:"
+    },
+    "b6": {
+     "lines": [
+      "Midday:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b7": {
+     "lines": [
+      "May the waters purify the earth; may the earth, thus purified, purify me.",
+      "May the waters purify Brahmaṇaspati, the lord of the Veda; may the Veda, thus purified, purify me.",
+      "Whatever leftover food unfit to be eaten I have eaten, whatever misconduct is mine, and any gifts accepted from unworthy people: may the waters purify me of all of it. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Pour water in palm to cover a black-gram seed; recite, sip:"
+    }
+   }
+  },
+  "8": {
+   "key": "dbeb0ff6bdde1f2d5bce264f77c57ab84d0d50e4830ddc497c82d94de86dfa3a",
+   "source": "c06897d8f5d995fc4d785923f641fd9a1f1f2e89be445953c910269902dd6c17",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "Evening:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b2": {
+     "lines": [
+      "May Agni, Manyu (the deity of anger) and the lords of anger protect me from the sins committed through anger.",
+      "Whatever sin I have committed during the day, by mind, by speech, by the hands, by the feet, by the belly and by the organ of generation, may the Day wipe it away.",
+      "Whatever evil there is in me, this, together with myself, I offer into the true light, the source of immortality. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Take water in the palm, enough to submerge a black gram seed; recite, then sip:"
+    },
+    "b4": {
+     "lines": [
+      "Salutations to Acyuta.",
+      "Salutations to Ananta.",
+      "Salutations to Govinda."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana as done at the beginning:"
+    },
+    "b5": {
+     "lines": [
+      "Salutations to Keśava.",
+      "Salutations to Nārāyaṇa.",
+      "Salutations to Mādhava.",
+      "Salutations to Govinda.",
+      "Salutations to Viṣṇu.",
+      "Salutations to Madhusūdana.",
+      "Salutations to Trivikrama.",
+      "Salutations to Vāmana.",
+      "Salutations to Śrīdhara.",
+      "Salutations to Hṛṣīkeśa.",
+      "Salutations to Padmanābha.",
+      "Salutations to Dāmodara.",
+      "Salutations to Saṅkarṣaṇa.",
+      "Salutations to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana as done at the beginning:"
+    },
+    "b7": {
+     "lines": [
+      "I have praised Dadhikrāvan, the victorious, swift and mighty horse; may he make our mouths fragrant and prolong our lives.",
+      "O Waters, you are indeed the source of happiness; establish us in strength, so that we may behold the great and delightful.",
+      "Make us partake here of your most auspicious essence, like loving mothers.",
+      "May we go fully to that essence, for whose abode you gladden us; O Waters, make us flourish."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    }
+   }
+  },
+  "9": {
+   "key": "d92e50b8c7f632a808b2a0be2eecf58a64faa1695e4d3f9ce2e490a16614a94d",
+   "source": "66a58e1a939a630dc7f53400690e146290c8ad21ee3249a2704db01ba3041686",
+   "blocks": {
+    "b3": {
+     "lines": [
+      "Om. As one is freed from a wooden post, as a man who is set free is released from it, as one who sweats becomes free of dirt after bathing, and as ghee is purified by a strainer, so may the waters cleanse me of sin."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite, then pour water into the palm, smell it, and let it fall:"
+    },
+    "b5": {
+     "lines": [
+      "Salutations to Acyuta.",
+      "Salutations to Ananta.",
+      "Salutations to Govinda.",
+      "Salutations to Keśava.",
+      "Salutations to Nārāyaṇa.",
+      "Salutations to Mādhava.",
+      "Salutations to Govinda.",
+      "Salutations to Viṣṇu.",
+      "Salutations to Madhusūdana.",
+      "Salutations to Trivikrama.",
+      "Salutations to Vāmana.",
+      "Salutations to Śrīdhara.",
+      "Salutations to Hṛṣīkeśa.",
+      "Salutations to Padmanābha.",
+      "Salutations to Dāmodara.",
+      "Salutations to Saṅkarṣaṇa.",
+      "Salutations to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana as at the beginning:"
+    },
+    "b7": {
+     "lines": [
+      "The metre is Daivī Gāyatrī; it is used in prāṇāyāma (breath control).",
+      "Om, the earth; Om, the atmosphere; Om, heaven; Om, the Mahas world; Om, the Janas world; Om, the Tapas world; Om, the Satya world.",
+      "Om. We meditate on that excellent radiance of the divine Savitṛ, who impels our intellects.",
+      "Om. He is the waters, the light, the essence, the immortal nectar, Brahman; he is earth, atmosphere and heaven. Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitṛ, the impeller, the Sun"
+      ],
+      [
+       "vareṇyam",
+       "excellent, worthy to be chosen"
+      ],
+      [
+       "bhargaḥ",
+       "radiance, effulgence"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate upon"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects, thoughts"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspires"
+      ]
+     ],
+     "cue": "Hold the nose for prāṇāyāma as before; touch the right ear at the end:"
+    }
+   }
+  },
+  "10": {
+   "key": "feb0eaa980c2a4421aeee7f7f7c61636c8ecadaf7a7de1426389965795548ed2",
+   "source": "5944e72333dbb08654491d24d0b44a60530521580155225b4c7a33bacfdf04fa",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "Morning:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b2": {
+     "lines": [
+      "For the destruction of all the sins I have incurred, and so for the pleasure of the Supreme Lord, I shall offer the morning arghya (offering of water to the Sun)."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite this saṅkalpa (formal resolve), then touch water:"
+    },
+    "b4": {
+     "lines": [
+      "Midday:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b5": {
+     "lines": [
+      "For the destruction of all the sins I have incurred, and so for the pleasure of the Supreme Lord, I shall offer the midday arghya."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite this saṅkalpa, then touch water:"
+    },
+    "b7": {
+     "lines": [
+      "Evening:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b8": {
+     "lines": [
+      "For the destruction of all the sins I have incurred, and so for the pleasure of the Supreme Lord, I shall offer the evening arghya."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite this saṅkalpa, then touch water:"
+    },
+    "b11": {
+     "lines": [
+      "Om. Earth, atmosphere, heaven.",
+      "We meditate on that most excellent radiance of the divine Savitṛ, the Sun, who impels our intellects."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "oṃ",
+       "the sacred syllable"
+      ],
+      [
+       "bhūḥ",
+       "the earth"
+      ],
+      [
+       "bhuvaḥ",
+       "the atmosphere"
+      ],
+      [
+       "suvaḥ",
+       "heaven"
+      ],
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitṛ, the impelling Sun"
+      ],
+      [
+       "vareṇyam",
+       "most excellent, to be sought"
+      ],
+      [
+       "bhargaḥ",
+       "radiance, splendour"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate upon"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspire"
+      ]
+     ],
+     "cue": "Standing, raise water in cupped hands and release it:"
+    },
+    "b13": {
+     "lines": [
+      "Its metre is Daivī Gāyatrī; it is employed in prāṇāyāma.",
+      "Om, the earth; Om, the atmosphere; Om, heaven; Om, the Mahas world; Om, the Janas world; Om, the Tapas world; Om, the Satya world.",
+      "Om. We meditate on that most excellent radiance of the divine Savitṛ, who impels our intellects.",
+      "Om, the waters, the light, the essence, the nectar of immortality, Brahman; earth, atmosphere, heaven, Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Holding the nose as before, do prāṇāyāma (breath control):"
+    }
+   }
+  },
+  "11": {
+   "key": "c446d85aaaacc0a81f6b9ae21d86161fb15a6c869a31827a37c88fb316ebaf78",
+   "source": "aef9b9729a979bcba0fcfbdb951f0b2950f61d1d2c1d18e9946142be3d4c0320",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "For the destruction of all the sins I have incurred, and for the pleasure of Śrī Parameśvara, I shall offer a single arghya (water offering) as expiation for letting the proper time pass."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite the saṅkalpa (statement of intent):"
+    },
+    "b3": {
+     "lines": [
+      "That Āditya, the Sun, is Brahman."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Water in hand, turn clockwise, sprinkle the water around yourself:"
+    },
+    "b6": {
+     "lines": [
+      "Salutations to Acyuta.",
+      "Salutations to Ananta.",
+      "Salutations to Govinda.",
+      "Salutations to Keśava.",
+      "Salutations to Nārāyaṇa.",
+      "Salutations to Mādhava.",
+      "Salutations to Govinda.",
+      "Salutations to Viṣṇu.",
+      "Salutations to Madhusūdana.",
+      "Salutations to Trivikrama.",
+      "Salutations to Vāmana.",
+      "Salutations to Śrīdhara.",
+      "Salutations to Hṛṣīkeśa.",
+      "Salutations to Padmanābha.",
+      "Salutations to Dāmodara.",
+      "Salutations to Saṅkarṣaṇa.",
+      "Salutations to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana as done at the beginning:"
+    },
+    "b8": {
+     "lines": [
+      "I satisfy Āditya, the Sun.",
+      "I satisfy Soma, the Moon.",
+      "I satisfy Aṅgāraka, Mars.",
+      "I satisfy Budha, Mercury.",
+      "I satisfy Bṛhaspati, Jupiter.",
+      "I satisfy Śukra, Venus.",
+      "I satisfy Śanaiścara, Saturn.",
+      "I satisfy Rāhu.",
+      "I satisfy Ketu.",
+      "I satisfy Keśava.",
+      "I satisfy Nārāyaṇa.",
+      "I satisfy Mādhava.",
+      "I satisfy Govinda.",
+      "I satisfy Viṣṇu.",
+      "I satisfy Madhusūdana.",
+      "I satisfy Trivikrama.",
+      "I satisfy Vāmana.",
+      "I satisfy Śrīdhara.",
+      "I satisfy Hṛṣīkeśa.",
+      "I satisfy Padmanābha.",
+      "I satisfy Dāmodara.",
+      "I satisfy Saṅkarṣaṇa.",
+      "I satisfy Vāsudeva.",
+      "I satisfy Bhūḥ, the earth.",
+      "I satisfy Bhuvaḥ, the atmosphere.",
+      "I satisfy Suvaḥ, heaven.",
+      "I satisfy Bhūḥ, Bhuvaḥ and Suvaḥ together."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Offer tarpaṇa (water offering) with the uddhariṇi, once for each name:"
+    }
+   }
+  },
+  "12": {
+   "key": "24f0262bbff161fa45cf69ae2015c7d665f40033249ebbddd51d5e670ecc02f4",
+   "source": "700206cd594fdf53de742578f1785612a61fb117452a1fcd29d9fb6544ae99fc",
+   "blocks": {
+    "b2": {
+     "lines": [
+      "Salutation to Acyuta.",
+      "Salutation to Ananta.",
+      "Salutation to Govinda."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana as before, sipping water at each name:"
+    },
+    "b3": {
+     "lines": [
+      "Salutation to Keśava.",
+      "Salutation to Nārāyaṇa.",
+      "Salutation to Mādhava.",
+      "Salutation to Govinda.",
+      "Salutation to Viṣṇu.",
+      "Salutation to Madhusūdana.",
+      "Salutation to Trivikrama.",
+      "Salutation to Vāmana.",
+      "Salutation to Śrīdhara.",
+      "Salutation to Hṛṣīkeśa.",
+      "Salutation to Padmanābha.",
+      "Salutation to Dāmodara.",
+      "Salutation to Saṅkarṣaṇa.",
+      "Salutation to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the limbs as in the first ācamana, reciting:"
+    },
+    "b5": {
+     "lines": [
+      "To remove all obstacles, one should meditate on Viṣṇu, clad in white garments, bright as the moon, four-armed, with a gracious face."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Tap both temples with both fists while reciting:"
+    },
+    "b7": {
+     "lines": [
+      "Of the mantra of the Earth (the seat), the seer is Merupṛṣṭha."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the head while reciting:"
+    },
+    "b9": {
+     "lines": [
+      "The deity is Kūrma, the divine Tortoise."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the face while reciting:"
+    },
+    "b11": {
+     "lines": [
+      "The metre is Sutala."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the chest while reciting:"
+    },
+    "b14": {
+     "lines": [
+      "Its application is for the seat.",
+      "Salutation to the seat of Ananta."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the place where you are seated while reciting:"
+    },
+    "b17": {
+     "lines": [
+      "Of the praṇava (the syllable Om), the seer is the Supreme Brahman."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the head while reciting:"
+    },
+    "b20": {
+     "lines": [
+      "The deity is the Supreme Self."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the face while reciting:"
+    },
+    "b22": {
+     "lines": [
+      "The metre is the divine Gāyatrī; its application is in prāṇāyāma (breath control)."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Bow in salutation while reciting:"
+    },
+    "b25": {
+     "lines": [
+      "The metre is the divine Gāyatrī; its application is in prāṇāyāma.",
+      "Om, the earth; Om, the atmosphere; Om, heaven; Om, the world of Mahas; Om, the world of Janas; Om, the world of Tapas; Om, the world of Truth.",
+      "Om, we meditate on that adorable radiance of the divine Savitṛ; may He impel our intellects.",
+      "Om, He is the waters, the light, the essence, the immortal, Brahman; He is earth, atmosphere and heaven; Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "bhūḥ",
+       "the earth"
+      ],
+      [
+       "bhuvaḥ",
+       "the atmosphere"
+      ],
+      [
+       "suvaḥ",
+       "heaven"
+      ],
+      [
+       "mahaḥ",
+       "the world of Mahas"
+      ],
+      [
+       "janaḥ",
+       "the world of Janas"
+      ],
+      [
+       "tapaḥ",
+       "the world of Tapas"
+      ],
+      [
+       "satyam",
+       "the world of Truth"
+      ],
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitṛ, the impeller"
+      ],
+      [
+       "vareṇyam",
+       "adorable, most excellent"
+      ],
+      [
+       "bhargaḥ",
+       "radiance"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate on"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may he impel"
+      ],
+      [
+       "āpaḥ",
+       "the waters"
+      ],
+      [
+       "jyotiḥ",
+       "light"
+      ],
+      [
+       "rasaḥ",
+       "essence"
+      ],
+      [
+       "amṛtam",
+       "the immortal"
+      ],
+      [
+       "brahma",
+       "Brahman"
+      ]
+     ],
+     "cue": "Do one prāṇāyāma; at the end touch the right ear:"
+    }
+   }
+  },
+  "13": {
+   "key": "138627973b7cbd72e104ce587c4412ab2689663565223bde960edd04a4f4eab9",
+   "source": "8b4a29bb6fdf11696ea3d90ea6e5c24d7e0a032e703ed2ac9703750371fd6bcb",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "The seer of the praṇava (the syllable Om) is Brahmā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the head while reciting:"
+    },
+    "b3": {
+     "lines": [
+      "Its metre is Daivī Gāyatrī; its deity is the Supreme Self (Paramātmā)."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the face while reciting:"
+    },
+    "b5": {
+     "lines": [
+      "Of the seven vyāhṛtis, the seers are Atri, Bhṛgu, Kutsa, Vasiṣṭha, Gautama, Kāśyapa and Āṅgirasa.",
+      "The metres are Gāyatrī, Uṣṇik, Anuṣṭup, Bṛhatī, Paṅkti, Triṣṭup and Jagatī.",
+      "The deities are Agni, Vāyu, Arka (the Sun), Vāgīśa (Bṛhaspati), Varuṇa, Indra and the Viśvedevas."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Bow with folded hands while reciting:"
+    },
+    "b7": {
+     "lines": [
+      "Its metre is Daivī Gāyatrī; it is applied in prāṇāyāma.",
+      "Om, the earth; Om, the atmosphere; Om, heaven; Om, the Mahar world; Om, the Janar world; Om, the Tapo world;"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform prāṇāyāma (breath control) once, reciting:"
+    },
+    "b8": {
+     "lines": [
+      "Om, the Satya world. Om, we meditate on that excellent radiance of the divine Savitṛ, who impels our intellects.",
+      "Om, it is the waters, the light, the essence, the immortal, Brahman; earth, atmosphere and heaven; Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitṛ, the impeller, the Sun"
+      ],
+      [
+       "vareṇyam",
+       "excellent, worthy to be chosen"
+      ],
+      [
+       "bhargaḥ",
+       "radiance, effulgence"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate on"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspires"
+      ],
+      [
+       "āpaḥ",
+       "the waters"
+      ],
+      [
+       "jyotiḥ",
+       "light"
+      ],
+      [
+       "rasaḥ",
+       "essence"
+      ],
+      [
+       "amṛtam",
+       "the immortal"
+      ],
+      [
+       "brahma",
+       "Brahman"
+      ]
+     ],
+     "cue": "Continue the prāṇāyāma, reciting:"
+    },
+    "b10": {
+     "lines": [
+      "May the boon-giving goddess come, the imperishable one, in harmony with the Veda.",
+      "O Gāyatrī, mother of the metres, accept this our prayer.",
+      "You are vigour, you are endurance, you are strength, you are radiance; you are the abode and the name of the gods.",
+      "You are all, the life of all; you are everything, the life of everything, the all-conquering Om. I invoke Gāyatrī."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Invoke Gāyatrī with cupped hands while reciting:"
+    },
+    "b12": {
+     "lines": [
+      "I invoke Sāvitrī."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Invoke with cupped hands as before:"
+    },
+    "b14": {
+     "lines": [
+      "I invoke Sarasvatī."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Invoke with cupped hands as before:"
+    }
+   }
+  },
+  "14": {
+   "key": "d9415dd77f6c80e5e3a29549a956d0de68b7d5a6b240769b3e2c2c2cc842abea",
+   "source": "fcace9007d9aa9e6ed8b2e1e8f16c26e32ec27add4ba9ddcb6d3601b5dcf7e03",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "For the Sāvitrī (Gāyatrī) mantra, the seer is Viśvāmitra, the metre is nicṛd gāyatrī, and the deity is Savitā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite while offering namaskāra (salutation):"
+    },
+    "b3": {
+     "lines": [
+      "We worship that adorable radiance of the god Savitā, who impels our intellects towards dharma and the other aims of life.",
+      "I meditate upon the golden Person, made of light, who dwells within the orb of the sun."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite, meditating on the Sun:"
+    },
+    "b5": {
+     "lines": [
+      "Tat savituḥ: salutation to the two thumbs, to the Self that is Brahmā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Fold index fingers with both thumbs, then release:"
+    },
+    "b7": {
+     "lines": [
+      "Vareṇiyam: salutation to the two index fingers, to the Self that is Viṣṇu."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "With thumbs, stroke index fingers from base to tip:"
+    }
+   }
+  },
+  "15": {
+   "key": "edcef06291be19c2474098a61f776fd19fd29d96b675468cee7cea2d2f4a8a29",
+   "source": "f7d0c18b7ea12bb690217e1bee1a2d03abfd4e35dfa9558d0641bace052f71fb",
+   "blocks": {
+    "b4": {
+     "lines": [
+      "I worship Gāyatrī, who has five faces in the hues of pearl, coral, gold, sapphire-blue and white, each face with three eyes.",
+      "She wears a jewelled crown set with the crescent moon, and her very being is the syllables that express the true meaning of reality.",
+      "In her hands she bears the gestures of granting boons and dispelling fear, a goad and a whip, a white skull, a mace, a conch, a discus and a pair of lotuses."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "With palms joined in namaskāra, recite:"
+    },
+    "b5": {
+     "lines": [
+      "The Gāyatrī Mantra"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b6": {
+     "lines": [
+      "Om. Earth, atmosphere and heaven.",
+      "We meditate on that excellent, adorable light of the divine Savitṛ, the Creator, who impels our intellects towards right action."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "oṃ",
+       "the sacred syllable, Brahman"
+      ],
+      [
+       "bhūḥ",
+       "the earth"
+      ],
+      [
+       "bhuvaḥ",
+       "the atmosphere"
+      ],
+      [
+       "suvaḥ",
+       "heaven"
+      ],
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitṛ, the sun as impeller and creator"
+      ],
+      [
+       "vareṇyam",
+       "excellent, worthy to be sought"
+      ],
+      [
+       "bhargaḥ",
+       "light, radiance that destroys sin"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate on"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects, thoughts"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspire"
+      ]
+     ],
+     "cue": "Do japa of this as many times as you can:"
+    }
+   }
+  },
+  "16": {
+   "key": "4f2f0bb4c390af26c399ece6900f0217ca415e05ed474973ebc6f16fb4d00cad",
+   "source": "7dbbe7293e629db77c29c282ad8d6cc136500f72567554297dcbd6f443cac7a3",
+   "blocks": {
+    "b4": {
+     "lines": [
+      "Om, the earth; Om, the atmosphere; Om, heaven; Om, the world of mahas; Om, the world of janas; Om, the world of tapas; Om, the world of satya.",
+      "Om, we meditate on that adorable radiance of the divine Savitr, who impels our intellects.",
+      "Om, He is the waters, the light, the essence, the nectar of immortality, Brahman: earth, atmosphere and heaven, Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitr, the impeller (the Sun)"
+      ],
+      [
+       "vareṇyam",
+       "adorable, most excellent"
+      ],
+      [
+       "bhargaḥ",
+       "radiance, sin-destroying light"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate upon"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspire"
+      ]
+     ],
+     "cue": "Perform prāṇāyāma while reciting:"
+    },
+    "b6": {
+     "lines": [
+      "Midday:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b7": {
+     "lines": [
+      "Om, the earth; Om, the atmosphere; Om, heaven; Om, the world of mahas; Om, the world of janas; Om, the world of tapas; Om, the world of satya.",
+      "Om, we meditate on that adorable radiance of the divine Savitr, who impels our intellects.",
+      "Om, He is the waters, the light, the essence, the nectar of immortality, Brahman: earth, atmosphere and heaven, Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform prāṇāyāma while reciting:"
+    },
+    "b9": {
+     "lines": [
+      "Evening:"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b10": {
+     "lines": [
+      "Om, the earth; Om, the atmosphere; Om, heaven; Om, the world of mahas; Om, the world of janas; Om, the world of tapas; Om, the world of satya.",
+      "Om, we meditate on that adorable radiance of the divine Savitr, who impels our intellects.",
+      "Om, He is the waters, the light, the essence, the nectar of immortality, Brahman: earth, atmosphere and heaven, Om."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform prāṇāyāma while reciting:"
+    },
+    "b11": {
+     "lines": [
+      "For the destruction of all the sins I have incurred, and for the pleasure of Śrī Parameśvara, I shall perform the evening sandhyā upasthāna (worship of the sandhyā deity)."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Make the evening saṅkalpa, saying:"
+    }
+   }
+  },
+  "17": {
+   "key": "30791199bd3022caaf3bdc496d8145ef43a309b735d579e23e499fc9b8104846",
+   "source": "5102c4ef3089be017ba61cfb48813f89367a301b1e7b886662306b039a425975",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "O Goddess, who dwells on the highest peak, on the summit of the mountain upon the earth:",
+      "having received leave from the brahmins, go, O Goddess, as you please."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Stand and recite, at all three sandhyās:"
+    },
+    "b4": {
+     "lines": [
+      "We meditate on the renown of the god Mitra, the sustainer of men: true, worthy to be won, and most wondrously famed.",
+      "Mitra, knowing all, sets people to their work; Mitra upholds the earth and the heaven; Mitra watches over the peoples without blinking.",
+      "To Mitra, the true one, let us offer an oblation rich in ghee.",
+      "O Mitra, O Āditya, may that mortal be foremost and rich in offerings who serves you by keeping his vow.",
+      "Protected by you, he is not slain and not overcome; sin does not reach him, neither from near nor from afar."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Morning: stand facing east and recite (upasthāna):"
+    },
+    "b7": {
+     "lines": [
+      "The god Savitā, moving through the region of space together with truth, laying to rest both the immortal and the mortal, comes on his golden chariot, beholding all the worlds.",
+      "Beholding the higher light beyond the darkness, we have reached the Sun, the god among the gods, the highest light.",
+      "His rays carry up the god Jātavedas, the Sun, so that all may see.",
+      "The wondrous face of the gods has risen, the eye of Mitra, Varuṇa and Agni.",
+      "The Sun, the soul of all that moves and all that stands still, has filled heaven, earth and the mid-region.",
+      "That eye, beneficial to the gods,"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Midday upasthāna; recite:"
+    }
+   }
+  },
+  "18": {
+   "key": "4855cd6da85c67cb939d42b43872c73057b12d88d8dae135526b523f97b9819d",
+   "source": "5808f9d62e690859eed46b64dbe109b4660fbf601a9d33e3027312ff252645e6",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "May we see for a hundred autumns that bright eye, beneficial to the gods, rising in the east; may we live a hundred autumns; may we rejoice a hundred autumns; may we be glad a hundred autumns; may we thrive a hundred autumns; may we hear a hundred autumns; may we speak well a hundred autumns; may we remain unvanquished a hundred autumns; and may we long behold the Sun.",
+      "He who has risen from the great ocean, shining forth from the midst of the waters, the mighty one with reddish eyes, the all-knowing Sun, may he purify me in mind."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Standing facing east, recite the midday upasthāna (worship of the Sun):"
+    },
+    "b4": {
+     "lines": [
+      "O Varuṇa, hear this call of mine, and be gracious to me today; seeking your protection, I call upon you.",
+      "Praising you with this hymn, I approach you for that which the sacrificer seeks through his offerings; O Varuṇa of wide renown, be not angry, attend to us here, and do not cut short our life.",
+      "O divine Varuṇa, whatever vow of yours we, like ordinary men, transgress day after day; whatever offence we humans commit against the divine host, O Varuṇa; whatever law of yours we have broken through heedlessness: do not harm us, O god, for that sin.",
+      "Whatever sin gamblers have cast upon us as a false charge, whatever we have truly committed, and whatever we have done unknowingly, cast all these away from us, O god, as if loosened; then, O Varuṇa, may we be dear to you."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "In the evening, facing west, recite the upasthāna to Varuṇa:"
+    }
+   }
+  },
+  "19": {
+   "key": "624144d92432fe5bbf075568f6979ab9f212edc524bb7d7d871d575f76e6a05f",
+   "source": "e99834b51ab3c1665d53091ea5b2820073294c93f3e4ad9585f5a950646db444",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "Salutation to Sandhyā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing east, bow and recite:"
+    },
+    "b3": {
+     "lines": [
+      "Salutation to Sāvitrī."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing south, bow and recite:"
+    },
+    "b5": {
+     "lines": [
+      "Salutation to Gāyatrī."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing west, bow and recite:"
+    },
+    "b7": {
+     "lines": [
+      "Salutation to Sarasvatī."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing north, bow and recite:"
+    },
+    "b9": {
+     "lines": [
+      "Salutations, again and again, to all the deities."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Turn back to face east and recite:"
+    },
+    "b11": {
+     "lines": [
+      "Desire did it; anger did it.",
+      "Salutations, again and again."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing east, bow and recite:"
+    },
+    "b13": {
+     "lines": [
+      "I salute you: I am ..................... of the ..................... gotra (lineage),",
+      "a follower of the Āpastamba Sūtra, a student of the Yajus branch,",
+      "..................... Śarmā by name; I am here, revered ones."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Covering both ears with both palms, recite:"
+    },
+    "b15": {
+     "lines": [
+      "Salutation to the eastern direction.",
+      "Salutation to the southern direction.",
+      "Salutation to the western direction.",
+      "Salutation to the northern direction.",
+      "Salutation to the region above."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Bowing, look at the sky and the directions and recite:"
+    }
+   }
+  },
+  "20": {
+   "key": "7170bb1d7c1ed5a0203c7c42c43a76dd2ee2d29e71008a94bb32cf4527139e9e",
+   "source": "709c93cdd37fc7d1c1849d9fb1046e175e895c5679c0bfc955453509a203857a",
+   "blocks": {
+    "b2": {
+     "lines": [
+      "Salutations to Yama, to Dharmarāja the King of Dharma, to Mṛtyu (Death), and to Antaka (the Ender).",
+      "Salutations to Vaivasvata (the son of Vivasvān), to Kāla (Time), and to the destroyer of all beings.",
+      "To Audumbara, to Dadhna, to Nīla, to Parameṣṭhin, to Vṛkodara, to Citra and to Citragupta: salutations again and again.",
+      "Salutations again and again to Śrī Citragupta."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing south, recite both verses and bow:"
+    },
+    "b4": {
+     "lines": [
+      "He is Order (ṛta) and Truth (satya), the Supreme Brahman, the Puruṣa, dark and tawny in hue, of unbroken celibacy, with unusual eyes.",
+      "To Him whose form is the whole universe, salutations again and again."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing north, recite and bow:"
+    },
+    "b6": {
+     "lines": [
+      "Salutations to Savitṛ, the one eye of the world, the cause of the world's creation, sustenance and dissolution.",
+      "He is made of the three Vedas, bears the three guṇas, and is in essence Brahmā (Viriñci), Nārāyaṇa and Śaṅkara."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Facing east, recite and bow to Sūryanārāyaṇa:"
+    },
+    "b8": {
+     "lines": [
+      "Śrīman Nārāyaṇa, who dwells at the centre of the sun's orb, should always be meditated upon.",
+      "He is seated on a lotus seat, wears armlets, makara-shaped earrings, a crown and a necklace; His body is golden, and He holds the conch and the discus.",
+      "O You who hold conch, discus and mace in Your hands, dweller in Dvārakā, Acyuta, Govinda, lotus-eyed One: protect me, who have come to You for refuge.",
+      "As water fallen from the sky goes to the ocean, so a salutation offered to any god goes to Keśava.",
+      "It goes to Śrī Keśava; salutations.",
+      "In all the Vedas…"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    }
+   }
+  },
+  "21": {
+   "key": "8ce31daec81dca3237fa3b783dffe096ea87c591f6164225716901ecd21013f3",
+   "source": "39a91bb610bf89c2d71237ee9debdf264806f35f06856a333adbcdaae5c8fe94",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "Whatever merit lies in all the Vedas, whatever fruit lies in all the holy places, that same fruit a person obtains by remembering the god Janārdana."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite, then bow in salutation:"
+    },
+    "b3": {
+     "lines": [
+      "Of all the expiations without exception, whether they consist of austerity or of ritual acts, the supreme one is the constant remembrance of Kṛṣṇa.",
+      "Salutation to Śrī Kṛṣṇa.",
+      "Salutation to Śrī Kṛṣṇa.",
+      "Salutation to Śrī Kṛṣṇa.",
+      "Salutation to Śrī Kṛṣṇa.",
+      "Salutation to Śrī Kṛṣṇa.",
+      "Whatever I do with body, speech, mind or senses, with intellect or self, or from the bent of my own nature, all of it I offer to the Supreme, to Śrīman Nārāyaṇa."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Close both ears with both hands, remembering Śrī Kṛṣṇa:"
+    },
+    "b4": {
+     "lines": [
+      "I offer my salutation: I, of the .............................................. gotra,",
+      "following the Āpastamba Sūtra, a student of the Yajus śākhā, ............................",
+      "............................................ Śarmā, am here, sirs."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite your pravara and name; touch both feet at asmi bhoḥ:"
+    },
+    "b7": {
+     "lines": [
+      "Salutation to Acyuta.",
+      "Salutation to Ananta.",
+      "Salutation to Govinda.",
+      "Salutation to Keśava.",
+      "Salutation to Nārāyaṇa.",
+      "Salutation to Mādhava.",
+      "Salutation to Govinda.",
+      "Salutation to Viṣṇu.",
+      "Salutation to Madhusūdana.",
+      "Salutation to Trivikrama.",
+      "Salutation to Vāmana.",
+      "Salutation to Śrīdhara.",
+      "Salutation to Hṛṣīkeśa.",
+      "Salutation to Padmanābha.",
+      "Salutation to Dāmodara.",
+      "Salutation to Saṅkarṣaṇa.",
+      "Salutation to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sit and perform ācamana as at the beginning:"
+    }
+   }
+  },
+  "22": {
+   "key": "00e85a6c7d1aa3bd0912855c7da4f9796ef7075b51cb9c8802007822c2dc5077",
+   "source": "178b6ad2dd4312b4e8c60d848654e61449e8e0520eb59fc5c2175ea1c42a16aa",
+   "blocks": {
+    "b2": {
+     "lines": [
+      "Oṃ. Earth, atmosphere and heaven.",
+      "We meditate on that most excellent radiance of the divine Savitṛ, the Sun, who impels our intellects."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "oṃ",
+       "the sacred syllable, the Supreme"
+      ],
+      [
+       "bhūḥ",
+       "the earth"
+      ],
+      [
+       "bhuvaḥ",
+       "the atmosphere"
+      ],
+      [
+       "suvaḥ",
+       "heaven"
+      ],
+      [
+       "tat",
+       "that"
+      ],
+      [
+       "savituḥ",
+       "of Savitṛ, the impeller, the Sun"
+      ],
+      [
+       "vareṇyam",
+       "most excellent, worthy to be sought"
+      ],
+      [
+       "bhargaḥ",
+       "radiance, sin-destroying light"
+      ],
+      [
+       "devasya",
+       "of the divine one"
+      ],
+      [
+       "dhīmahi",
+       "we meditate upon"
+      ],
+      [
+       "dhiyaḥ",
+       "intellects"
+      ],
+      [
+       "yaḥ",
+       "who"
+      ],
+      [
+       "naḥ",
+       "our"
+      ],
+      [
+       "pracodayāt",
+       "may impel, inspire"
+      ]
+     ],
+     "cue": "Standing, facing north, sprinkle water on your seat:"
+    },
+    "b4": {
+     "lines": [
+      "O divine Savitṛ, bring forth for us today good fortune together with offspring, and drive away the evil of bad dreams.",
+      "O divine Savitṛ, drive away all misfortunes, and bring to me whatever is auspicious."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Touch the sprinkled spot with the ring finger, apply to forehead:"
+    }
+   }
+  },
+  "23": {
+   "key": "2a6bd8fd3fbbdeadaed9639b8f390995154add233c6814b6bd54a6f2cda73daa",
+   "source": "f9dad80651bbd3953a3c5a80c659460f32d864032888b02ee4b6480c9f133464",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "Samidādhāna (offering of fuel-sticks into the sacred fire)"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b3": {
+     "lines": [
+      "Salutation to Acyuta.",
+      "Salutation to Ananta.",
+      "Salutation to Govinda.",
+      "Salutation to Keśava.",
+      "Salutation to Nārāyaṇa.",
+      "Salutation to Mādhava.",
+      "Salutation to Govinda.",
+      "Salutation to Viṣṇu.",
+      "Salutation to Madhusūdana.",
+      "Salutation to Trivikrama.",
+      "Salutation to Vāmana.",
+      "Salutation to Śrīdhara.",
+      "Salutation to Hṛṣīkeśa.",
+      "Salutation to Padmanābha.",
+      "Salutation to Dāmodara.",
+      "Salutation to Saṅkarṣaṇa.",
+      "Salutation to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana, reciting:"
+    },
+    "b4": {
+     "lines": [
+      "Morning Samidādhāna"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": null
+    },
+    "b5": {
+     "lines": [
+      "For the removal of all obstacles, one should meditate on Viṣṇu, who wears white garments, whose complexion is like the moon, who has four arms and a gracious, smiling face."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b6": {
+     "lines": [
+      "Oṃ, the earth; Oṃ, the atmosphere; Oṃ, heaven; Oṃ, the Mahar world; Oṃ, the Janar world; Oṃ, the Tapo world; Oṃ, the Satya world.",
+      "Oṃ, we meditate on that adorable radiance of the divine Savitṛ; may he impel our intellects.",
+      "Oṃ, the waters, the light, the essence, the nectar of immortality, Brahman, earth, atmosphere and heaven: Oṃ.",
+      "For the destruction of all the sins I have incurred, and for the pleasure of the Supreme Lord, I shall perform the morning samidādhāna."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b8": {
+     "lines": [
+      "O Agni, I purify you all around; may I be blessed with long life and with wealth.",
+      "May I be rich in good offspring through offspring, rich in good heroes through heroic sons, of good splendour through splendour, well nourished through nourishments, with a good home through houses, well protected through a protector, of good intelligence through intelligence, and rich in sacred knowledge through students of the Veda."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water clockwise around the fire with the right hand:"
+    },
+    "b9": {
+     "lines": [
+      "Having swept and gathered the fire all around."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Then sweep around the fire:"
+    }
+   }
+  },
+  "24": {
+   "key": "97350109cf6b402799dceefc2681c5b25e01c302034f69a775e033906e71a110",
+   "source": "7d7e0a86a81445a5c1c8027ab905a3d6ddc203eb928c59bb8df81ad833ae187b",
+   "blocks": {
+    "b2": {
+     "lines": [
+      "O Aditi, give your consent."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water south of the fire, from west to east:"
+    },
+    "b4": {
+     "lines": [
+      "O Anumati, give your consent."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water on the west side, from south to north:"
+    },
+    "b6": {
+     "lines": [
+      "O Sarasvatī, give your consent."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water on the north side, from west to east:"
+    },
+    "b8": {
+     "lines": [
+      "O divine Savitṛ, impel this rite forward."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water clockwise all around the fire:"
+    },
+    "b10": {
+     "lines": [
+      "I have brought a samidh for Agni, the great Jātavedas, knower of all beings.",
+      "Just as you, O Agni, are kindled by the samidh, so kindle me with long life, lustre, wealth, intelligence, offspring, cattle, the radiance of Vedic learning, and food to eat. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": [
+      [
+       "agnaye",
+       "for Agni"
+      ],
+      [
+       "samidham",
+       "the fuel stick"
+      ],
+      [
+       "āhārṣam",
+       "I have brought"
+      ],
+      [
+       "bṛhate",
+       "for the great one"
+      ],
+      [
+       "jātavedase",
+       "for Jātavedas, knower of all born beings"
+      ],
+      [
+       "yathā",
+       "just as"
+      ],
+      [
+       "tvam",
+       "you"
+      ],
+      [
+       "agne",
+       "O Agni"
+      ],
+      [
+       "samidhā",
+       "by the fuel stick"
+      ],
+      [
+       "samidhyase",
+       "are kindled"
+      ],
+      [
+       "evam",
+       "so"
+      ],
+      [
+       "mām",
+       "me"
+      ],
+      [
+       "āyuṣā",
+       "with long life"
+      ],
+      [
+       "varcasā",
+       "with lustre"
+      ],
+      [
+       "sanyā",
+       "with wealth"
+      ],
+      [
+       "medhayā",
+       "with intelligence"
+      ],
+      [
+       "prajayā",
+       "with offspring"
+      ],
+      [
+       "paśubhiḥ",
+       "with cattle"
+      ],
+      [
+       "brahmavarcasena",
+       "with the radiance of Vedic learning"
+      ],
+      [
+       "annādyena",
+       "with food to eat"
+      ],
+      [
+       "samedhaya",
+       "kindle, make prosper"
+      ],
+      [
+       "svāhā",
+       "offering formula: I offer"
+      ]
+     ],
+     "cue": "Place one samidh into the fire:"
+    },
+    "b11": {
+     "lines": [
+      "You are fuel; may we prosper. Svāhā.",
+      "You are a samidh; may we flourish fully. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Place one samidh into the fire with each mantra:"
+    },
+    "b12": {
+     "lines": [
+      "You are radiance; place radiance in me. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Place one samidh into the fire:"
+    },
+    "b13": {
+     "lines": [
+      "Today I have gone to the waters; we have been united with their essence.",
+      "Full of nourishment, O Agni, I have come to you; unite me with lustre. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Place one samidh into the fire:"
+    },
+    "b14": {
+     "lines": [
+      "O Agni, unite me with lustre, with offspring, and with wealth. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Place one samidh into the fire:"
+    }
+   }
+  },
+  "25": {
+   "key": "6a0af6861e5751b90f779eec1a4577f79916afe02bf63545ab526ea4675f08a7",
+   "source": "e1934c2a816e7b6dcfd004dbe6867c51cbc0ae35da419cd954af21a847774c27",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "May the gods know this offering of mine; may Indra know it, together with the seers. Svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b3": {
+     "lines": [
+      "To Agni, the great one, the heaven free of sorrow, svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b5": {
+     "lines": [
+      "To Heaven and Earth, svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b7": {
+     "lines": [
+      "O Agni, this is your fuel-stick (samidh); by it may you grow and be replenished.",
+      "By it may I too keep growing and flourishing. Svāhā. (10)"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b8": {
+     "lines": [
+      "O Agni, whoever seeks to make me, who have a rightful share, without a share, make him shareless, O Agni; make me one who has a share. Svāhā. (11)"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b9": {
+     "lines": [
+      "O Agni, having placed this fuel-stick in you, may I become one who fulfils all vows. Svāhā. (12)"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b10": {
+     "lines": [
+      "To Bhūḥ, the earth, svāhā. (13)"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b11": {
+     "lines": [
+      "To Bhuvaḥ, the mid-region, svāhā. (14)",
+      "Oṃ, svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b12": {
+     "lines": [
+      "Oṃ, to Bhūḥ, Bhuvaḥ and Suvaḥ, the earth, the mid-region and heaven, svāhā. (16)"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b13": {
+     "lines": [
+      "O Aditi, you have given your assent."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water south of the fire, from west to east:"
+    }
+   }
+  },
+  "26": {
+   "key": "9b3e5e6d2ea431bde61067ef4b9cfadec66c325185a92fa43d54bcd30e4a937b",
+   "source": "f23e7505086c89453bab77a019371c7ed5642f1ca4f8108e085453f9378bd55c",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "O Anumati, you have given your assent."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water on the west side of the fire, south to north:"
+    },
+    "b3": {
+     "lines": [
+      "O Sarasvati, you have given your assent."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water on the north side of the fire, west to east:"
+    },
+    "b5": {
+     "lines": [
+      "O divine Savitr, you have set this rite in motion."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Sprinkle water clockwise all around the fire:"
+    },
+    "b7": {
+     "lines": [
+      "Svaha: this is offered."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Place one samidh in the fire:"
+    },
+    "b9": {
+     "lines": [
+      "O Agni, by that brilliance which is yours, may I become brilliant; by that splendour which is yours, may I become splendid; by that power to overcome foes which is yours, may I become possessed of that power.",
+      "May Agni place in me intelligence, offspring and brilliance.",
+      "May Indra place in me intelligence, offspring and the vigour of the senses.",
+      "May Surya place in me intelligence, offspring and radiance."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Standing, pray to Agni:"
+    },
+    "b11": {
+     "lines": [
+      "O Rudra, do not harm our children and grandchildren, our life, our cows or our horses.",
+      "Do not, in your anger, slay our valiant men.",
+      "Bearing offerings, we worship you with reverence."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Seated, mix the ash with water in the hand, reciting:"
+    }
+   }
+  },
+  "27": {
+   "key": "3791c536da6eead3272d3891f20fd42f64c965866f3c6a5b046c2e5b8a2d5fda",
+   "source": "ed91d12ba3ab5709be802e410afdc8121b450038ebec85aeb9f17db1464c5305",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "May I become endowed with intelligence."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Apply bhasma (sacred ash) on the forehead, saying:"
+    },
+    "b3": {
+     "lines": [
+      "May I become radiant with vigour."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Apply bhasma on the right shoulder, saying:"
+    },
+    "b5": {
+     "lines": [
+      "May I become endowed with splendour."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Apply bhasma on the left shoulder, saying:"
+    },
+    "b7": {
+     "lines": [
+      "May I become endowed with the spiritual radiance born of Vedic study."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Apply bhasma on the navel, saying:"
+    },
+    "b9": {
+     "lines": [
+      "May I become long-lived."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Apply bhasma on the abdomen, saying:"
+    },
+    "b11": {
+     "lines": [
+      "May I become renowned."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Apply bhasma on the upper part of the back, saying:"
+    },
+    "b13": {
+     "lines": [
+      "May I become prosperous in every way."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Apply bhasma on the brahmarandhra (crown of the head), saying:"
+    },
+    "b15": {
+     "lines": [
+      "May there be well-being; this is offered with svāhā."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Offer one samidh (sacred fuel-stick) into the fire, saying:"
+    },
+    "b17": {
+     "lines": [
+      "May there be well-being.",
+      "O Fire, bearer of oblations, grant me faith, intelligence, fame, wisdom, learning, understanding, prosperity, strength, long life, lustre and health.",
+      "Grant me prosperity, O bearer of oblations.",
+      "Salutations to you, O bearer of oblations."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b18": {
+     "lines": [
+      "Of all the expiations without exception, consisting of austerities and rites, the remembrance of Śrī Kṛṣṇa is the supreme one.",
+      "Salutations to Śrī Kṛṣṇa.",
+      "Salutations to Śrī Kṛṣṇa.",
+      "Salutations to Śrī Kṛṣṇa."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    }
+   }
+  },
+  "28": {
+   "key": "3a150a4e163f1f3ba510695612c01a7f345815ef4b44a5fda98684f76da42aad",
+   "source": "dad43cab17be4d578010454f283705ffcfad179f665dcb92250ff47a9a7fbd31",
+   "blocks": {
+    "b1": {
+     "lines": [
+      "Whatever I do with body, speech, mind or senses, with intellect or self, or from the natural bent of my nature, all of it I offer to the Supreme, Śrīman Nārāyaṇa."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b2": {
+     "lines": [
+      "I offer my salutation: ........................................ of the gotra,",
+      "a follower of the Āpastamba sūtra, a student of the Yajus śākhā, ....................",
+      "........................................ I am Śarmā, sirs."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite your pravara, gotra and name; touch both feet saying asmi bhoḥ:"
+    },
+    "b5": {
+     "lines": [
+      "Salutations to Acyuta.",
+      "Salutations to Ananta.",
+      "Salutations to Govinda.",
+      "Salutations to Keśava.",
+      "Salutations to Nārāyaṇa.",
+      "Salutations to Mādhava.",
+      "Salutations to Govinda.",
+      "Salutations to Viṣṇu.",
+      "Salutations to Madhusūdana.",
+      "Salutations to Trivikrama.",
+      "Salutations to Vāmana.",
+      "Salutations to Śrīdhara.",
+      "Salutations to Hṛṣīkeśa.",
+      "Salutations to Padmanābha.",
+      "Salutations to Dāmodara.",
+      "Salutations to Saṅkarṣaṇa.",
+      "Salutations to Vāsudeva."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Perform ācamana, reciting:"
+    },
+    "b6": {
+     "lines": [
+      "I bow to that Acyuta by whose remembrance and the utterance of whose name whatever is deficient in austerity, homa rites and other acts at once becomes complete.",
+      "O Fire, O God, whatever I have offered, though lacking in mantra, lacking in rite and lacking in devotion, may it become complete through you.",
+      "By this morning samidādhāna (offering of sacred fuel sticks into the fire), may the Lord, who embodies all"
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    },
+    "b7": {
+     "lines": [
+      "the gods, Śrī Yajñeśvara (the Lord of sacrifice), be fully pleased with all.",
+      "May he make complete and meritorious all that was deficient or excessive.",
+      "May all be an offering to Śrī Yajñeśvara."
+     ],
+     "rows": null,
+     "labels": null,
+     "gloss": null,
+     "cue": "Recite:"
+    }
+   }
+  }
+ }
+}

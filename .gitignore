@@ -8,3 +8,8 @@ __pycache__/
 dist/
 build/
 .DS_Store
+# rendered output of the sample books (inputs are tracked, outputs are not)
+samples/*/*.pdf
+samples/*/*.epub
+samples/*/work/*
+!samples/*/work/manifest.json
