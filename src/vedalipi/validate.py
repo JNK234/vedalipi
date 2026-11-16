@@ -9,10 +9,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .normalize import normalize_text
-from .schema import FLAG_INVALID_SEQUENCE, FLAG_READER_DISAGREEMENT, FLAG_SVARA_COUNT_MISMATCH, FlagReport, Page
+from .schema import (
+    FLAG_INVALID_SEQUENCE,
+    FLAG_NON_VEDIC_MARK,
+    FLAG_READER_DISAGREEMENT,
+    FLAG_SINGLE_READ,
+    FLAG_SVARA_COUNT_MISMATCH,
+    FLAG_UNCONVERTED_LETTER,
+    FlagReport,
+    Page,
+)
 
 # Part of the validate stage fingerprint: bump when the checks change so cached flags are redone.
-VALIDATE_VERSION = "3"
+VALIDATE_VERSION = "6"
 
 # Text codepoints counted as marks above / below the line.
 _ABOVE = {"॑", "᳚"}  # svarita stroke, double svarita
@@ -75,6 +84,82 @@ def _orphan_marks(line: str) -> int:
             bad += 1
         prev = ch
     return bad
+
+
+# Blocks whose characters belong in Devanagari Sanskrit: Devanagari, Vedic Extensions, Devanagari Extended.
+_DEVA_BLOCKS = ((0x0900, 0x097F), (0x1CD0, 0x1CFF), (0xA8E0, 0xA8FF))
+# Blocks of the other Indic scripts (Bengali to Sinhala; Brahmi, Grantha, Sharada, ... in plane 1). After
+# conversion to Devanagari, a character from one of them is a letter or sign of the source script that the
+# converter did not know (Telugu ౘ, Kannada ೝ) and passed through as it was.
+_INDIC_BLOCKS = ((0x0980, 0x0DFF), (0x11000, 0x11FFF))
+
+
+def _in(blocks: tuple[tuple[int, int], ...], ch: str) -> bool:
+    return any(a <= ord(ch) <= b for a, b in blocks)
+
+
+def stray_kind(ch: str) -> str | None:
+    """Why `ch` does not belong in a Devanagari Sanskrit line, as a flag name, or None when it does.
+
+    FLAG_UNCONVERTED_LETTER: any character of another Indic script. FLAG_NON_VEDIC_MARK: any other combining
+    mark outside Devanagari and the Vedic blocks, e.g. U+0331 (a Latin macron below, which OCR gives for
+    an anudatta bar). Everything else (ASCII, punctuation, spaces, joiners) passes.
+    """
+    if _in(_DEVA_BLOCKS, ch):
+        return None
+    if _in(_INDIC_BLOCKS, ch):
+        return FLAG_UNCONVERTED_LETTER
+    if _is_combining(ch):
+        return FLAG_NON_VEDIC_MARK
+    return None
+
+
+@dataclass(frozen=True)
+class Stray:
+    """Every occurrence of one stray character in one Sanskrit string (a line, table cell or label)."""
+
+    block: str
+    where: str  # "line 6", "row 2 cell 1", "label 3"
+    flag: str
+    char: str
+    count: int
+    words: tuple[str, ...]  # the words it occurs in, so a proofreader can find it on the page
+
+    @property
+    def name(self) -> str:
+        return f"U+{ord(self.char):04X} {unicodedata.name(self.char, 'UNNAMED')}"
+
+    def note(self) -> str:
+        return f"{self.block} {self.where}: {self.flag} {self.name} x{self.count} in {', '.join(self.words)}"
+
+
+def _strays_in(block: str, where: str, text: str) -> list[Stray]:
+    found: dict[str, list[str]] = {}
+    for word in text.split():
+        for ch in word:
+            if stray_kind(ch):
+                found.setdefault(ch, []).append(word)
+    return [
+        Stray(block, where, stray_kind(ch), ch, len(words), tuple(dict.fromkeys(words)))
+        for ch, words in found.items()
+    ]
+
+
+def page_strays(page: Page) -> list[Stray]:
+    """Stray characters in every Sanskrit string of the page: lines, table cells and labels, whatever the
+    block type. Text is read as it is; nothing is changed."""
+    out: list[Stray] = []
+    for b in page.blocks:
+        if b.is_sanskrit:
+            for i, line in enumerate(b.lines, 1):
+                out += _strays_in(b.id, f"line {i}", line)
+            for r, row in enumerate(b.rows or [], 1):
+                for c, cell in enumerate(row, 1):
+                    out += _strays_in(b.id, f"row {r} cell {c}", cell)
+        for k, label in enumerate(b.labels or [], 1):
+            if label.is_sanskrit:
+                out += _strays_in(b.id, f"label {k}", label.text)
+    return out
 
 
 @dataclass
@@ -255,27 +340,106 @@ def _word_diff(a: str, b: str) -> str:
     return "; ".join(parts[:6])
 
 
-def cross_check(page: Page, second: Page) -> list[tuple[str, str]]:
-    """Compare the page with an independent second OCR read of the same image, line by line.
+# Two lines at least this similar are one printed line read twice; below it, different lines.
+_SAME_LINE = 0.6
 
-    Returns (block id, note) for every line the two reads give differently. A per-line mark count cannot
-    see a mark put on the wrong akshara or a remembered word; two readers rarely make the same slip.
-    Lines only one read has are left to the other checks (band seams and block splits differ between reads).
+
+@dataclass
+class ReadComparison:
+    """Two reads of a page lined up: lines read differently, and lines only one read has."""
+
+    differ: list[tuple[str, str]] = field(default_factory=list)  # (block id, note)
+    # (block id, line number) of a first-read line -> the second-read line paired with it (equal or not).
+    pairs: dict[tuple[str, int], str] = field(default_factory=dict)
+    # (block id, note): a line of the first read with no counterpart in the second, or a line of the
+    # second read with none in the first (noted on the block of the first-read line it follows).
+    single: list[tuple[str, str]] = field(default_factory=list)
+
+
+def compare_reads(page: Page, second: Page) -> ReadComparison:
+    """Line up the page's Sanskrit lines with an independent second read of the same page.
+
+    A line both reads have but give differently is a disagreement: a per-line mark count cannot see a
+    mark put on the wrong akshara or a remembered word, and two readers rarely make the same slip. A line
+    with no counterpart at least _SAME_LINE similar in the other read was read only once.
     """
     a, b = _sa_lines(page), _sa_lines(second)
     ka, kb = [_key(x[2]) for x in a], [_key(x[2]) for x in b]
-    out = []
+    out = ReadComparison()
+
+    def ratio(i: int, j: int) -> float:
+        return difflib.SequenceMatcher(None, ka[i], kb[j], autojunk=False).ratio()
+
+    def only_second(after: int, j: int) -> None:
+        # Noted on the first-read line it follows (or precedes, at the top of the page).
+        if not a:
+            return
+        bid, n, _ = a[max(after, 0)]
+        where = f"after line {n}" if after >= 0 else f"before line {n}"
+        out.single.append((bid, f"{bid} {where}: single_read: only the second read has: {b[j][2]}"))
+
+    def only_first(i: int) -> None:
+        bid, n, _ = a[i]
+        out.single.append((bid, f"{bid} line {n}: single_read: only the first read has this line"))
+
     for op, i0, i1, j0, j1 in difflib.SequenceMatcher(None, ka, kb, autojunk=False).get_opcodes():
-        if op != "replace":
-            continue
-        # Pair each differing line with its most similar counterpart in the other read.
-        for i in range(i0, i1):
-            best = max(range(j0, j1), key=lambda j: difflib.SequenceMatcher(None, ka[i], kb[j], autojunk=False).ratio())
-            if difflib.SequenceMatcher(None, ka[i], kb[best], autojunk=False).ratio() < 0.6:
-                continue
-            bid, n, text = a[i]
-            out.append((bid, f"{bid} line {n}: second read differs: {_word_diff(text, b[best][2])}"))
+        if op == "equal":
+            for i, j in zip(range(i0, i1), range(j0, j1)):
+                out.pairs[(a[i][0], a[i][1])] = b[j][2]
+        elif op == "delete":
+            for i in range(i0, i1):
+                only_first(i)
+        elif op == "insert":
+            for j in range(j0, j1):
+                only_second(i0 - 1, j)
+        elif op == "replace":
+            pairs = _pair_lines(i0, i1, j0, j1, ratio)
+            paired_j = {j for _, j in pairs}
+            last_i = i0 - 1  # the first-read line a second-read-only line follows
+            by_i = dict(pairs)
+            for i in range(i0, i1):
+                if i not in by_i:
+                    only_first(i)
+                    continue
+                bid, n, text = a[i]
+                out.pairs[(bid, n)] = b[by_i[i]][2]
+                out.differ.append((bid, f"{bid} line {n}: second read differs: {_word_diff(text, b[by_i[i]][2])}"))
+            for j in range(j0, j1):
+                if j in paired_j:
+                    last_i = next(i for i, jj in pairs if jj == j)
+                else:
+                    only_second(last_i, j)
     return out
+
+
+def _pair_lines(i0: int, i1: int, j0: int, j1: int, ratio) -> list[tuple[int, int]]:
+    """Pair lines i0..i1 of one read with lines j0..j1 of the other, one to one and in reading order,
+    maximizing total similarity; only pairs at least _SAME_LINE similar count. Liturgical text repeats
+    whole phrases line after line, so pairing each line with its most similar line on its own would
+    pair two lines with the same counterpart and hide the line the other read lacks."""
+    n, m = i1 - i0, j1 - j0
+    r = [[ratio(i0 + x, j0 + y) for y in range(m)] for x in range(n)]
+    best = [[0.0] * (m + 1) for _ in range(n + 1)]
+    for x in range(1, n + 1):
+        for y in range(1, m + 1):
+            take = best[x - 1][y - 1] + r[x - 1][y - 1] if r[x - 1][y - 1] >= _SAME_LINE else -1.0
+            best[x][y] = max(best[x - 1][y], best[x][y - 1], take)
+    pairs = []
+    x, y = n, m
+    while x and y:
+        if r[x - 1][y - 1] >= _SAME_LINE and best[x][y] == best[x - 1][y - 1] + r[x - 1][y - 1]:
+            pairs.append((i0 + x - 1, j0 + y - 1))
+            x, y = x - 1, y - 1
+        elif best[x][y] == best[x - 1][y]:
+            x -= 1
+        else:
+            y -= 1
+    return pairs[::-1]
+
+
+def cross_check(page: Page, second: Page) -> list[tuple[str, str]]:
+    """(block id, note) for every line the page and its second read give differently."""
+    return compare_reads(page, second).differ
 
 
 def validate_page(page: Page, image: Path | None, second: Page | None = None) -> FlagReport:
@@ -285,7 +449,11 @@ def validate_page(page: Page, image: Path | None, second: Page | None = None) ->
     marks above the headline and below the baseline, and compare with counts of U+0951+U+1CDA and
     U+0952 in the text; a mismatch adds "svara_count_mismatch". Without an image (text input),
     only text-level checks run (e.g. invalid mark sequences). With `second` (an independent second OCR
-    read of the same image), every line the two reads disagree on gets "reader_disagreement".
+    read of the same image), every line the two reads disagree on gets "reader_disagreement"; when the page
+    has no image svara count, a line only one read has gets "single_read".
+    Every Sanskrit line, cell and label is also checked for characters that do not belong in Devanagari:
+    "unconverted_letter" for a source-script letter the conversion left as it was, "non_vedic_mark" for
+    a combining mark such as U+0331. The text itself is never changed.
     """
     report = FlagReport(page=page.page)
 
@@ -295,9 +463,15 @@ def validate_page(page: Page, image: Path | None, second: Page | None = None) ->
             report.block_flags[block_id].append(name)
         report.notes.append(note)
 
-    if second is not None:
-        for block_id, note in cross_check(page, second):
+    compared = compare_reads(page, second) if second is not None else None
+    if compared is not None:
+        for block_id, note in compared.differ:
             flag(block_id, note, FLAG_READER_DISAGREEMENT)
+
+    # A source letter the conversion did not know, or a non-Vedic mark, stays in the text exactly as read:
+    # flagged for proofreading, never dropped or swapped for a guess.
+    for stray in page_strays(page):
+        flag(stray.block, stray.note(), stray.flag)
 
     lines_img: list[_Line] = []
     xb = 0.0
@@ -310,6 +484,11 @@ def validate_page(page: Page, image: Path | None, second: Page | None = None) ->
             img_h, img_w = gray.shape
             lines_img, xb = _page_lines(gray)
             del gray
+    if compared is not None and not lines_img:
+        # No image svara count on this page (a book in another script, or no readable image): a line only
+        # one reader saw has had no check at all.
+        for block_id, note in compared.single:
+            flag(block_id, note, FLAG_SINGLE_READ)
     cursor = 0
     used: list[tuple[int, float, float]] = []  # (line id, x0, x1) claimed by earlier blocks
     for block in page.blocks:

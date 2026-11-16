@@ -35,8 +35,18 @@ FLAG_ROUNDTRIP_FAIL = "roundtrip_fail"
 FLAG_INVALID_SEQUENCE = "invalid_sequence"
 FLAG_AMBIGUOUS_SVARA_SPAN = "ambiguous_svara_span"  # set by the OCR model: one printed mark spans two aksharas
 FLAG_READER_DISAGREEMENT = "reader_disagreement"  # an independent second OCR read of the line differs
+# Sanskrit text still holds a letter or sign of another Indic script after conversion to Devanagari (Telugu ౘ).
+FLAG_UNCONVERTED_LETTER = "unconverted_letter"
+# Sanskrit text holds a combining mark that is neither Devanagari nor Vedic (U+0331 read for an anudatta).
+FLAG_NON_VEDIC_MARK = "non_vedic_mark"
+# With --cross-read and no image svara count (books in other scripts): a line only one of the two reads has,
+# so nothing checked it. Also set on the block where a line only the second read has would sit.
+FLAG_SINGLE_READ = "single_read"
 # Flags owned by validate.py: replaced wholesale whenever a page is re-validated.
-VALIDATOR_FLAGS = (FLAG_SVARA_COUNT_MISMATCH, FLAG_INVALID_SEQUENCE, FLAG_READER_DISAGREEMENT)
+VALIDATOR_FLAGS = (
+    FLAG_SVARA_COUNT_MISMATCH, FLAG_INVALID_SEQUENCE, FLAG_READER_DISAGREEMENT, FLAG_UNCONVERTED_LETTER,
+    FLAG_NON_VEDIC_MARK, FLAG_SINGLE_READ,
+)
 
 StageStatus = Literal["pending", "done", "failed"]
 
@@ -205,6 +215,8 @@ class Manifest(_JsonModel):
     input_hash: str
     input_kind: str
     num_pages: int
+    # Script the book is printed in (--source-script), so later commands can read its OCR text as printed.
+    source_script: str = "devanagari"
     pages: dict[int, dict[str, StageRecord]] = Field(default_factory=dict)
 
     def record(self, page: int, stage: str) -> StageRecord | None:
@@ -223,13 +235,24 @@ class Manifest(_JsonModel):
         return sum(max(r.spent_usd, r.cost_usd) for stages in self.pages.values() for r in stages.values())
 
 
+class PageOrigin(_JsonModel):
+    """What a master page was built from, so a rebuild can tell why the page changed."""
+
+    ocr: str = ""  # sha256 of the ocr.json the page's text was read from ("" when there was none)
+    normalize_settings: str = ""  # the normalize stage settings, e.g. "v3:src=kannada"
+    validate_settings: str = ""  # the validate stage settings, e.g. "v6:n3:image=none:second=none"
+
+
 class Master(_JsonModel):
     """<out>/master.json: the Devanagari source of truth for every rendered script.
 
     norm_hashes maps page -> hash of the norm.json it was built from, so a rebuild only
-    replaces pages whose OCR actually changed and hand corrections survive re-runs.
-    flag_hashes does the same for flags.json: a re-validated page gets fresh validator flags
-    while its (possibly corrected) text is kept.
+    replaces pages whose normalized text actually changed. flag_hashes does the same for flags.json:
+    a re-validated page gets fresh validator flags while its (possibly corrected) text is kept.
+
+    corrections lists every hand correction applied, in order. When a page is rebuilt from the same OCR
+    text (normalize or validate changed), they are applied again; when the OCR text itself changed they
+    no longer fit and are dropped with a warning. origins records what each page was built from.
     """
 
     title: str = ""
@@ -237,6 +260,9 @@ class Master(_JsonModel):
     pages: list[Page] = Field(default_factory=list)
     norm_hashes: dict[int, str] = Field(default_factory=dict)
     flag_hashes: dict[int, str] = Field(default_factory=dict)
+    # Left out of the JSON while empty, so masters made before corrections were recorded stay as they are.
+    corrections: list["Correction"] = Field(default_factory=list, exclude_if=lambda v: not v)
+    origins: dict[int, PageOrigin] = Field(default_factory=dict, exclude_if=lambda v: not v)
 
     def page(self, number: int) -> Page:
         for p in self.pages:
@@ -258,7 +284,12 @@ class Correction(_JsonModel):
     heading level or alignment. Fields left out stay as they are.
 
     Setting type "image" turns the block into a drawing: its lines and rows are cleared, and it keeps its
-    bbox unless one is given. labels sets the text labels drawn inside an image block."""
+    bbox unless one is given. labels sets the text labels drawn inside an image block.
+
+    set_lines edits single lines ({line number from 1: text}) and leaves the others as they are, so when the
+    page is re-normalized the other lines follow the new normalize. A text with a newline becomes several
+    lines (a line the reader missed); an empty text removes the line. clear_flags removes those flags and
+    keeps the rest (flags replaces the whole list)."""
 
     page: int
     block_id: str
@@ -270,11 +301,16 @@ class Correction(_JsonModel):
     flags: list[str] | None = None
     level: int | None = None
     align: Align | None = None
+    set_lines: dict[int, str] | None = None
+    clear_flags: list[str] | None = None
 
     @field_validator("bbox")
     @classmethod
     def _check_bbox(cls, v: list[float] | None) -> list[float] | None:
         return _check_bbox_value(v)
+
+
+Master.model_rebuild()
 
 
 class BlockTranslation(_JsonModel):

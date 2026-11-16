@@ -30,6 +30,7 @@ def _cmd_run(a: argparse.Namespace) -> int:
         cross_read=a.cross_read,
         source_script=a.source_script,
         languages=tuple(x.strip() for x in a.languages.split(",") if x.strip()) if a.languages else (),
+        second_read=Path(a.second_read).expanduser().resolve() if a.second_read else None,
     )
     runner, pdf = pipeline.run(cfg)
     print(f"stages run: {len(runner.ran)}, cached: {len(runner.skipped)}, failed: {len(runner.failed)}")
@@ -95,6 +96,14 @@ def _cmd_report(a: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_verify(a: argparse.Namespace) -> int:
+    from . import verify
+
+    report = verify.verify(Path(a.dir).expanduser().resolve(), a.script)
+    print(verify.summary(report))
+    return 0 if report.passed else 1
+
+
 def _cmd_judge(a: argparse.Namespace) -> int:
     from . import judge
 
@@ -117,12 +126,31 @@ def _cmd_judge(a: argparse.Namespace) -> int:
 def _cmd_apply(a: argparse.Namespace) -> int:
     out_dir = Path(a.dir).expanduser().resolve()
     data = json.loads(Path(a.corrections).read_text(encoding="utf-8"))
-    corrections = [Correction.model_validate(c) for c in (data if isinstance(data, list) else [data])]
     with pipeline.out_lock(out_dir):
         master = Master.load(out_dir / "master.json")
-        pipeline.apply_corrections(master, corrections).save(out_dir / "master.json")
+        if isinstance(data, dict) and "entries" in data:  # a corrections.todo.json from `vedalipi proof`
+            from . import proof
+
+            corrections, messages = proof.todo_corrections(master, data)
+            for m in messages:
+                print(m)
+        else:
+            corrections = [Correction.model_validate(c) for c in (data if isinstance(data, list) else [data])]
+        if corrections:
+            pipeline.apply_corrections(master, corrections).save(out_dir / "master.json")
     print(f"applied {len(corrections)} correction(s) to {out_dir / 'master.json'}")
     return 0
+
+
+def _cmd_proof(a: argparse.Namespace) -> int:
+    from . import proof
+
+    out_dir = Path(a.dir).expanduser().resolve()
+    with pipeline.out_lock(out_dir):
+        report = proof.proof(out_dir, a.script)
+        _, stats = proof.write_todo(report)
+    print(proof.summary(report, stats, a.top))
+    return 1 if report.items or report.pages else 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -130,7 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
 
     r = sub.add_parser("run", help="OCR/ingest INPUT, build master.json, render the target script")
-    r.add_argument("input", help="scanned PDF, folder of page images, or Devanagari .txt/.json")
+    r.add_argument("input", help="scanned PDF, folder of page images, or Sanskrit .txt/.json in the --source-script script")
     r.add_argument("--out", required=True, help="output directory (cache lives in OUT/work)")
     r.add_argument("--script", default="kannada", choices=supported_scripts(), metavar="SCRIPT",
                    help="target script: kannada (default), telugu, or any vidyut script name")
@@ -149,10 +177,13 @@ def build_parser() -> argparse.ArgumentParser:
                    help="OCR every page a second time and flag lines the two reads disagree on (doubles OCR cost)")
     r.add_argument("--source-script", default="devanagari", choices=supported_scripts(), metavar="SCRIPT",
                    help="script the book is printed in: devanagari (default), telugu, or any vidyut script name; "
-                        "its Sanskrit becomes the Devanagari master")
+                        "its Sanskrit becomes the Devanagari master (for .txt/.json input too: the script the text is in)")
     r.add_argument("--languages", metavar="CODES",
                    help='languages printed in the book as ISO 639-1 codes, e.g. "te,sa" for Telugu instructions '
                         "around Sanskrit mantras (default: Sanskrit only)")
+    r.add_argument("--second-read", metavar="FILE",
+                   help="for .txt/.json input: a second, independent reading of the same book (same script and "
+                        "pages); lines the two readings give differently are flagged, as with --cross-read")
     r.set_defaults(func=_cmd_run)
 
     rd = sub.add_parser("render", help="re-render from DIR/master.json only (no OCR)")
@@ -196,9 +227,23 @@ def build_parser() -> argparse.ArgumentParser:
     jd.add_argument("--all-meanings", action="store_true", help="the edition was rendered with --all-meanings")
     jd.set_defaults(func=_cmd_judge)
 
+    vf = sub.add_parser("verify", help="PASS or CHECK per page, with reasons; exit 1 when a page needs a check")
+    vf.add_argument("dir")
+    vf.add_argument("--script", choices=supported_scripts(), metavar="SCRIPT",
+                    help="target script to check (default: the script rendered last, else kannada)")
+    vf.set_defaults(func=_cmd_verify)
+
+    pf = sub.add_parser("proof", help="lines to check, most svara differences first; writes DIR/corrections.todo.json")
+    pf.add_argument("dir")
+    pf.add_argument("--script", choices=supported_scripts(), metavar="SCRIPT",
+                    help="target script for the output checks (default: the script rendered last, else kannada)")
+    pf.add_argument("--top", type=int, metavar="N", help="print only the first N lines (the todo file has all)")
+    pf.set_defaults(func=_cmd_proof)
+
     ac = sub.add_parser("apply-corrections", help="apply a JSON list of corrections to DIR/master.json")
     ac.add_argument("dir")
-    ac.add_argument("corrections", help='JSON: [{"page": 3, "block_id": "b2", "lines": ["..."]}]')
+    ac.add_argument("corrections", help='JSON: [{"page": 3, "block_id": "b2", "lines": ["..."]}], or the '
+                    "corrections.todo.json written by `vedalipi proof`")
     ac.set_defaults(func=_cmd_apply)
     return p
 
