@@ -84,7 +84,10 @@ def _gum_pattern(script: str) -> re.Pattern:
     forms = {A8F3, transliterate._convert("ग्ग्ं", DEVA, script), transliterate._convert("ग्ं", DEVA, script)}
     if transliterate.DEFAULT_A8F3.get(script):
         forms.add(transliterate.DEFAULT_A8F3[script])
-    return re.compile("|".join(re.escape(f) for f in sorted(forms, key=len, reverse=True)))
+    # A reader can put a svara between the virama and the anusvara (ग्॑ं); normalize still makes that one ꣳ.
+    svaras = "[" + "".join(MARKS) + "]*"
+    return re.compile("|".join(re.escape(f[:-1]) + svaras + re.escape(f[-1]) if len(f) > 1 else re.escape(f)
+                               for f in sorted(forms, key=len, reverse=True)))
 
 
 def count(text: str, script: str, *, output: bool = False) -> Counts:

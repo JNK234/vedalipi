@@ -150,3 +150,13 @@ def test_roman_target_counts_svaras_through_the_latin_marks(tmp_path):
     out = text_book(tmp_path, CLEAN, target="iast")
     page = vf.verify(out, "iast").pages[0]
     assert page.source[:3] == page.output[:3] == (4, 5, 0) and page.status == "PASS"
+
+
+@pytest.mark.parametrize("text,script", [("अहिग्॑ं", "devanagari"), ("ಅಹಿಗ್॑ಂ", "kannada"), ("అహిగ్గ్॒ం", "telugu")])
+def test_gum_spelling_with_a_svara_before_the_anusvara_counts_once(text, script):
+    # normalize turns these into ꣳ with the svara after it; the source count must see the same one ꣳ.
+    from vedalipi.normalize import normalize_text
+    from vedalipi.transliterate import _convert
+    from vedalipi.verify import count
+    assert normalize_text(_convert(text, script, "devanagari")).count("ꣳ") == 1
+    assert count(text, script)[3] == 1

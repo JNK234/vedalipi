@@ -187,3 +187,23 @@ def test_a_todo_edit_typed_the_old_way_is_normalized_and_stays_checked(tmp_path)
     assert main(["proof", str(out)]) == 1
     again = {e["line"]: e for e in json.loads(todo.read_text(encoding="utf-8"))["entries"]}
     assert again[1]["checked"] is True and again[2]["checked"] is False
+
+
+def test_validate_change_does_not_replay_a_line_insertion_twice(book, tmp_path):
+    # A set_lines edit that inserts a line is not idempotent: replaying it on the already corrected page
+    # would insert the line again. A validate-only rebuild must start from the normalized page.
+    out = tmp_path / "out"
+    assert run(book, out) == 0
+    before = list(Master.load(out / "master.json").page(3).blocks[0].lines)
+    fix = tmp_path / "fix.json"
+    fix.write_text(json.dumps([{"page": 3, "block_id": "b3-1", "set_lines": {"1": before[0] + "\nनमः"}}],
+                              ensure_ascii=False), encoding="utf-8")
+    assert main(["apply-corrections", str(out), str(fix)]) == 0
+    corrected = list(Master.load(out / "master.json").page(3).blocks[0].lines)
+    assert corrected == [before[0], "नमः", *before[1:]]
+    # Adding a second read changes only validation (new flags); the text and its normalize are the same.
+    second = tmp_path / "book2.kn.txt"
+    shutil.copy(FIXTURES / "book2.kn.txt", second)
+    assert main(["run", str(book), "--second-read", str(second), "--source-script", "kannada", "--script",
+                 "telugu", "--out", str(out)]) == 0
+    assert Master.load(out / "master.json").page(3).blocks[0].lines == corrected

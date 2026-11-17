@@ -515,9 +515,14 @@ def _merge_page(master: Master, p: int, norm: Path, flags: Path, origin: PageOri
             # Same text, new validation: swap the validator's flags, keep everything else, and apply the
             # page's corrections again (a proofreader's cleared flags stay cleared).
             report = FlagReport.load(flags)
-            page = master.page(p)
-            for b in page.blocks:
-                b.flags = [f for f in b.flags if f not in VALIDATOR_FLAGS]
+            if mine:
+                # Corrections are replayed below, and a line insertion or removal is not idempotent: start
+                # from the normalized page, not the already corrected one.
+                page = Page.load(norm)
+            else:
+                page = master.page(p)
+                for b in page.blocks:
+                    b.flags = [f for f in b.flags if f not in VALIDATOR_FLAGS]
             master.upsert_page(report.apply_to(page))
             master.flag_hashes[p] = fh
             if mine:
