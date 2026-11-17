@@ -101,7 +101,8 @@ def test_json_input_in_telugu_becomes_the_devanagari_master(tmp_path):
         Block(id="b2", type="verse", lang="sa", lines=["అ॒గ్నిమీ॑ళే పు॒రోహి॑తం। అహి॑గ్ం"]),
     ]).model_dump_json(), encoding="utf-8")
     cfg = RunConfig(input_path=src, out_dir=tmp_path / "out", source_script="telugu", jobs=1)
-    runner, pdf = pipeline.run(cfg)
+    runner, outputs = pipeline.run(cfg)
+    pdf = outputs["pdf"] if outputs else None
     assert not runner.failed and pdf is not None and pdf.exists()
     page = Master.load(cfg.master_path).page(1)
     assert page.block("b1").lines == ["ఈ మంత్రమును చెప్పవలెను."]  # Telugu prose keeps its script

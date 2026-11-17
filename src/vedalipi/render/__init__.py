@@ -1,4 +1,4 @@
-# ABOUTME: Render stage: lays out a transliterated master as a PDF with Typst (pip "typst"), vendored Noto fonts.
+# ABOUTME: Render stage: lays out a transliterated master as a PDF with Typst (pip "typst"), vendored Noto fonts; epub.py writes the EPUB.
 # ABOUTME: Mirrors source structure, marks source page boundaries, embeds image crops and the Devanagari master.
 
 from __future__ import annotations
