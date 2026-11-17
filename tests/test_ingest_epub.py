@@ -416,3 +416,45 @@ def test_cli_accepts_an_epub_input(publisher_epub, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "epub: " in out and (tmp_path / "out" / "pub.telugu.epub").exists()
     assert json.loads((tmp_path / "out" / "master.json").read_text())["title"] == "Test Book"
+
+
+def test_a_book_wide_lang_does_not_decide_each_block(tmp_path):
+    # Pandoc writes lang="sa" on <html> for the whole book; Telugu prose in it must stay Telugu, and a
+    # book-wide lang="te" must not make the mantras Telugu. A lang on the block itself still counts.
+    body = "<p>ఇది తెలుగు వివరణ.</p><p>ఓం నమః ॥</p><p lang=\"sa\">గణానాం త్వా గణపతిం హవామహే</p>"
+    rules = dict(source_script="telugu", languages=("te", "sa"))
+    for book_lang in ("sa", "te"):
+        ep = make_epub(tmp_path / f"{book_lang}.epub", [("a.xhtml", xhtml(body, lang=book_lang))])
+        pages = ingest.load_text_pages(ep, **rules)
+        assert [b.lang for b in pages[0].blocks] == ["te", "sa", "sa"], book_lang
+
+
+def test_an_embedded_master_cannot_point_at_local_files(tmp_path):
+    # A master.json inside an EPUB comes from wherever the EPUB came from: its source_image paths must not
+    # make the renderer read files on this machine.
+    secret = tmp_path / "secret.png"
+    secret.write_bytes(png())
+    master = Master.model_validate({"pages": [{"page": 1, "source_image": str(secret), "blocks": [
+        {"id": "b1", "type": "verse", "lang": "sa", "lines": ["ॐ नमः ॥"]},
+        {"id": "b2", "type": "image", "lang": "en", "bbox": [0.0, 0.0, 1.0, 1.0]}]}]})
+    ep = make_epub(tmp_path / "book.epub", [("a.xhtml", xhtml("<p>ॐ नमः ॥</p>"))],
+                   extra={"master.json": master.model_dump_json().encode()})
+    pages = ingest.load_text_pages(ep)
+    assert [p.source_image for p in pages] == [""]
+    assert pages[0].blocks[0].lines == ["ॐ नमः ॥"]
+
+
+def test_an_unreadable_image_does_not_move_the_next_one(tmp_path):
+    body = '<p>ॐ नमः ॥</p><img src="bad.png"/><p>मध्ये ॥</p><img src="good.png"/>'
+    ep = make_epub(tmp_path / "book.epub", [("a.xhtml", xhtml(body))],
+                   images={"bad.png": b"not a png", "good.png": png()})
+    page = ingest.load_text_pages(ep, assets_dir=tmp_path / "assets")[0]
+    assert [b.type for b in page.blocks] == ["prose", "prose", "image"]
+
+
+def test_an_odd_list_start_number_is_ignored(tmp_path):
+    # "²".isdigit() is True but int("²") fails; a list start the reader cannot use falls back to 1.
+    body = '<ol start="²"><li>ॐ नमः ॥</li></ol><ol start="3"><li>शान्तिः ॥</li></ol>'
+    ep = make_epub(tmp_path / "book.epub", [("a.xhtml", xhtml(body))])
+    lines = [b.lines for b in ingest.load_text_pages(ep)[0].blocks]
+    assert len(lines) == 2 and lines[1][0].startswith("3")

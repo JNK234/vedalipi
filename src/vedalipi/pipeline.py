@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from .schema import (
     VALIDATOR_FLAGS,
+    Block,
     Correction,
     FlagReport,
     Manifest,
@@ -580,6 +581,30 @@ def apply_corrections(master: Master, corrections: list[Correction], *, record: 
     return Master.model_validate(out.model_dump())
 
 
+def _relabel(block: Block, lang: str) -> None:
+    """Give a block a new language and move its text into the script that language has in the master: a
+    Sanskrit block is Devanagari, any other keeps its own language's script. The block's existing text is
+    converted from the script it is written in, so relabelling a mistagged block needs no retyping."""
+    from .ingest_epub import dominant_script
+    from .normalize import normalize_text
+    from .render.fonts import LANG_SCRIPT
+    from .transliterate import _convert, supported_scripts
+
+    target = DEVA if lang == "sa" else LANG_SCRIPT.get(lang)
+    known = set(supported_scripts())
+
+    def move(text: str) -> str:
+        src = dominant_script(text)
+        if target is not None and src not in (None, "latin", target) and src in known and target in known:
+            text = _convert(text, src, target)
+        return normalize_text(text) if lang == "sa" else text
+
+    block.lang = lang
+    block.lines = [move(line) for line in block.lines]
+    if block.rows is not None:
+        block.rows = [[move(c) for c in row] for row in block.rows]
+
+
 def _apply_correction(master: Master, c: Correction) -> None:
     """Apply one correction to master in place; KeyError when its page or block is gone, ValueError when
     a line it edits is not there. Sanskrit text in a correction is normalized exactly like OCR text, so a
@@ -587,8 +612,8 @@ def _apply_correction(master: Master, c: Correction) -> None:
     from .normalize import normalize_text
 
     block = master.page(c.page).block(c.block_id)
-    if c.lang is not None:  # first: the block's language decides whether its new text is normalized
-        block.lang = c.lang
+    if c.lang is not None and c.lang != block.lang:  # first: the language decides how the text is normalized
+        _relabel(block, c.lang)
     sa = normalize_text if block.is_sanskrit else (lambda t: t)
     if c.bbox is not None:
         block.bbox = c.bbox
@@ -751,8 +776,10 @@ def _run(cfg: RunConfig) -> tuple[StageRunner, dict[str, Path] | None]:
     from . import ingest
 
     kind = ingest.input_kind(cfg.input_path)
-    if cfg.second_read is not None and kind not in ("text", "json"):
-        raise ValueError("--second-read is for .txt/.json input; for a scan use --cross-read")
+    if cfg.second_read is not None and kind not in ingest.TEXT_KINDS:
+        raise ValueError("--second-read is for .txt/.json/.epub input; for a scan use --cross-read")
+    if cfg.cross_read and kind in ingest.TEXT_KINDS:
+        raise ValueError("--cross-read re-reads scanned pages with OCR; for .txt/.json/.epub input use --second-read")
     input_hash = sha256_input(cfg.input_path)
     shared: dict = {"input_hash": input_hash}
     if kind in ingest.TEXT_KINDS:
@@ -761,7 +788,9 @@ def _run(cfg: RunConfig) -> tuple[StageRunner, dict[str, Path] | None]:
         )
         num_pages = len(shared["text_pages"])
         if cfg.second_read is not None:
-            shared["second_pages"] = ingest.load_text_pages(cfg.second_read)
+            shared["second_pages"] = ingest.load_text_pages(
+                cfg.second_read, source_script=cfg.source_script, languages=cfg.languages
+            )
             shared["second_hash"] = sha256_input(cfg.second_read)
             if len(shared["second_pages"]) != num_pages:
                 print(f"second read has {len(shared['second_pages'])} pages, the book {num_pages}; pages it lacks "

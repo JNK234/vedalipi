@@ -435,3 +435,14 @@ def test_epubcheck_passes(tmp_path, edition):
     assert shutil.which("java"), "epubcheck needs java"
     res = subprocess.run(["java", "-jar", str(_epubcheck_jar()), str(epub)], capture_output=True, text=True, timeout=300)
     assert res.returncode == 0 and "0 errors / 0 warnings" in res.stdout + res.stderr, res.stdout + res.stderr
+
+
+def test_control_characters_in_the_text_do_not_break_the_package(tmp_path):
+    # OCR or an imported file can carry a raw control character, which XML forbids; it is dropped from the
+    # XHTML instead of failing the render after the PDF was already written.
+    master = Master(title="Ctl\x0b", source="c.pdf", pages=[
+        Page(page=1, blocks=[Block(id="v", type="verse", lines=["ॐ न\x08मः ॥"])])])
+    target = transliterate.transliterate_master(master, "telugu")
+    out = render_epub(master, target, tmp_path / "c.epub", script="telugu", work_dir=tmp_path / "work")
+    ch = read_epub(out)["OEBPS/ch001.xhtml"].decode()
+    assert "\x08" not in ch and target.page(1).block("v").lines[0].replace("\x08", "") in ch

@@ -67,11 +67,17 @@ INDIC_RUN = re.compile("[\u0900-\u0DFF\u1CD0-\u1CFF\uA8E0-\uA8FF]+")
 # Unicode block of an Indic run -> the target script whose font sets it.
 INDIC_BLOCKS = [(0x0900, 0x097F, "devanagari"), (0x0B80, 0x0BFF, "tamil"), (0x0C00, 0x0C7F, "telugu"), (0x0C80, 0x0CFF, "kannada")]
 
-E = html.escape
+# Characters XML 1.0 forbids (C0 controls other than tab/newline/return, lone surrogates, U+FFFE/U+FFFF). OCR
+# or an imported file can carry one; it carries no text, and left in it makes the whole package unreadable.
+_XML_ILLEGAL = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def E(s: str) -> str:
+    return html.escape(_XML_ILLEGAL.sub("", s))
 
 
 def _attr(s: str) -> str:
-    return html.escape(str(s), quote=True)
+    return html.escape(_XML_ILLEGAL.sub("", str(s)), quote=True)
 
 
 # ---------------------------------------------------------------- fonts

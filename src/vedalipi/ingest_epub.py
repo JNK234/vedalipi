@@ -287,7 +287,10 @@ class _Walker:
     def _node(self, n: _Node, lang: str, align: str) -> None:
         if n.tag in _SKIP or "hidden" in n.attrs or "srcpage" in n.attr("class").split():
             return
-        lang = n.attr("xml:lang", "lang") or lang
+        # A lang on <html> or <body> is one declaration for the whole document (Pandoc writes the book's
+        # main language there), so it would decide every block alike; only a lang below them counts.
+        if n.tag not in ("html", "body"):
+            lang = n.attr("xml:lang", "lang") or lang
         align = _align_of(n, align)
         if _is_pagebreak(n):
             label = n.attr("title", "aria-label") or _clean(_inline_text(n)).strip()
@@ -373,7 +376,8 @@ class _Walker:
 
     def _list(self, n: _Node, lang: str, align: str) -> None:
         ordered = n.tag == "ol"
-        start = int(n.attr("start") or 1) if (n.attr("start") or "1").isdigit() else 1
+        raw = n.attr("start") or "1"
+        start = int(raw) if raw.isascii() and raw.isdigit() else 1
         k = start
         for c in n.children:
             if not isinstance(c, _Node) or c.tag != "li":
@@ -495,26 +499,32 @@ def _to_block(item: Item, bid: str, rules: LangRules) -> Block:
     return Block(id=bid, type=item.type, lang=lang, lines=lines, rows=item.rows, level=item.level, align=item.align)
 
 
-def _compose_images(images: list[bytes], dest: Path) -> list[list[float]] | None:
-    """Stack a page's images into one canvas at dest (the page's "scan"); returns each image's bbox on it."""
+def _compose_images(images: list[bytes], dest: Path) -> list[list[float] | None] | None:
+    """Stack a page's images into one canvas at dest (the page's "scan"). Returns one entry per image, in
+    order: its bbox on the canvas, or None when it could not be read; None when no image could be read."""
     from PIL import Image
 
-    opened = []
+    opened: list = []
     for data in images:
         try:
             im = Image.open(BytesIO(data))
             im.load()
             opened.append(im.convert("RGB"))
-        except Exception:
-            continue
-    if not opened:
+        except Exception:  # any decoder failure: the image is left out, never the page
+            opened.append(None)
+    if not any(opened):
         return None
-    width = min(CANVAS_WIDTH, max(im.width for im in opened))
-    scaled = [im.resize((width, max(1, round(im.height * width / im.width)))) for im in opened]
-    height = sum(im.height for im in scaled) + CANVAS_GAP * (len(scaled) + 1)
+    width = min(CANVAS_WIDTH, max(im.width for im in opened if im))
+    scaled = [im.resize((width, max(1, round(im.height * width / im.width)))) if im else None for im in opened]
+    read = [im for im in scaled if im]
+    height = sum(im.height for im in read) + CANVAS_GAP * (len(read) + 1)
     canvas = Image.new("RGB", (width, height), "white")
-    boxes, y = [], CANVAS_GAP
+    boxes: list[list[float] | None] = []
+    y = CANVAS_GAP
     for im in scaled:
+        if im is None:
+            boxes.append(None)
+            continue
         canvas.paste(im, (0, y))
         boxes.append([0.0, y / height, 1.0, (y + im.height) / height])
         y += im.height + CANVAS_GAP
@@ -570,7 +580,9 @@ def load_epub_pages(
     zf, book = open_epub(Path(path))
     try:
         if book.master is not None:
-            pages = sorted(book.master.pages, key=lambda p: p.page)
+            # The master came inside the file, from wherever the file came from: its source_image paths
+            # name files on another machine, or any file on this one, so they are never followed.
+            pages = [p.model_copy(update={"source_image": ""}) for p in sorted(book.master.pages, key=lambda p: p.page)]
             if pages:
                 return pages
         rules = LangRules(source_script=source_script, languages=languages)
@@ -602,9 +614,10 @@ def load_epub_pages(
                 else:
                     source_image = str(dest)
                     for slot, box in zip(image_slots, boxes):
-                        blocks[slot].bbox = box
-                    if len(boxes) < len(image_slots):  # unreadable images drop out
-                        blocks = [b for i, b in enumerate(blocks) if i not in image_slots[len(boxes):]]
+                        if box is not None:
+                            blocks[slot].bbox = box
+                    unreadable = {slot for slot, box in zip(image_slots, boxes) if box is None}
+                    blocks = [b for i, b in enumerate(blocks) if i not in unreadable]
                 blocks = [b.model_copy(update={"id": f"b{i + 1}"}) for i, b in enumerate(blocks)]
             if label:
                 blocks.append(Block(id=f"b{len(blocks) + 1}", type="page_number", lang="en", lines=[label], align="center"))

@@ -269,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
-    except RuntimeError as e:  # e.g. another process holds the output directory
+    except (RuntimeError, ValueError) as e:  # e.g. another process holds the output directory; a bad input
         print(f"vedalipi: {e}", file=sys.stderr)
         return 2
 
