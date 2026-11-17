@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -12,7 +11,12 @@ from vedalipi import pipeline, transliterate
 from vedalipi import verify as vf
 from vedalipi.cli import main
 from vedalipi.pipeline import RunConfig
-from vedalipi.schema import Block, Correction, FlagReport, Manifest, Master, Page, StageRecord
+from vedalipi.schema import (
+    Correction,
+    Manifest,
+    Master,
+    StageRecord,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "kannada_ocr"
 

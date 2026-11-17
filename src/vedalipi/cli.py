@@ -9,9 +9,8 @@ import sys
 from pathlib import Path
 
 from . import pipeline
-from .transliterate import supported_scripts
 from .schema import Correction, Master
-
+from .transliterate import supported_scripts
 
 FORMAT_CHOICES = ("pdf", "epub", "both")
 

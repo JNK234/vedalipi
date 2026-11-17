@@ -68,7 +68,7 @@ _BLOCK = {
 
 
 class _Node:
-    __slots__ = ("tag", "attrs", "children", "parent")
+    __slots__ = ("attrs", "children", "parent", "tag")
 
     def __init__(self, tag: str, attrs: dict[str, str], parent: _Node | None):
         self.tag, self.attrs, self.parent = tag, attrs, parent

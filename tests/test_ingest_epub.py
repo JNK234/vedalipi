@@ -11,6 +11,7 @@ from pathlib import Path
 import pymupdf
 import pytest
 from PIL import Image
+from test_render import fixture_master
 
 from vedalipi import ingest, pipeline, transliterate
 from vedalipi.ingest_epub import (
@@ -23,8 +24,6 @@ from vedalipi.ingest_epub import (
 )
 from vedalipi.render.epub import render_epub
 from vedalipi.schema import Correction, Master
-
-from test_render import fixture_master
 
 OPF = """<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id">

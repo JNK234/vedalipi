@@ -765,4 +765,4 @@ def render_epub(
     )
 
 
-__all__ = ["render_epub", "write_epub", "SCRIPT_TAGS", "MAX_CHAPTER_BLOCKS"]
+__all__ = ["MAX_CHAPTER_BLOCKS", "SCRIPT_TAGS", "render_epub", "write_epub"]

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 import zipfile
 from datetime import UTC, datetime
@@ -11,15 +10,20 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import pytest
+from test_labels import LABELS, labelled_master, make_out
+from test_render import fixture_master, make_scan
 
 from vedalipi import judge, pipeline, transliterate
 from vedalipi.render import FONTS_DIR, font_dirs
 from vedalipi.render.document import BLANK_RE, build_document
-from vedalipi.render.epub import MAX_CHAPTER_BLOCKS, SCRIPT_TAGS, language_tags, render_epub, write_epub
-from vedalipi.schema import Block, Label, Manifest, Master, Page
-
-from test_labels import LABELS, labelled_master, make_out
-from test_render import MARK_TEST, fixture_master, make_scan
+from vedalipi.render.epub import (
+    MAX_CHAPTER_BLOCKS,
+    SCRIPT_TAGS,
+    language_tags,
+    render_epub,
+    write_epub,
+)
+from vedalipi.schema import Block, Manifest, Master, Page
 
 XHTML = "{http://www.w3.org/1999/xhtml}"
 OPF = "{http://www.idpf.org/2007/opf}"
@@ -298,6 +302,7 @@ def test_side_by_side_pairs_each_line_with_its_original(tmp_path):
 
 def test_translated_edition_epub(tmp_path):
     import test_translate as tt
+
     from vedalipi import translate as tl
 
     cfg = tt.setup_out(tmp_path)
@@ -414,6 +419,7 @@ def test_epubcheck_passes(tmp_path, edition):
         epub = pipeline.render_from_master(out_dir, "kannada", fmt="epub")
     elif edition == "translated":
         import test_translate as tt
+
         from vedalipi import translate as tl
 
         cfg = tt.setup_out(tmp_path)

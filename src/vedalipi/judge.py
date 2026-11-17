@@ -12,8 +12,8 @@ from pathlib import Path
 from . import pipeline, transliterate
 from .render.document import (
     BLANK_RE,
-    MANTRA_TYPES,
     BODY_EXCLUDED,
+    MANTRA_TYPES,
     STYLE,
     header_logo,
     is_edge_artifact,

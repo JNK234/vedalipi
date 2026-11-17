@@ -9,7 +9,7 @@ from pathlib import Path
 
 from . import transliterate
 from .normalize import A8F3
-from .pipeline import FLAGS_JSON, NORM_JSON, OCR_JSON, page_dir
+from .pipeline import NORM_JSON, OCR_JSON, page_dir
 from .schema import (
     FLAG_INVALID_SEQUENCE,
     FLAG_LOW_CONFIDENCE,

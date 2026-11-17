@@ -12,6 +12,7 @@ from pathlib import Path
 
 from . import transliterate
 from . import verify as vf
+from .normalize import normalize_text
 from .pipeline import FLAGS_JSON, OCR2_JSON, OCR_JSON, page_dir, to_master_form
 from .schema import (
     FLAG_INVALID_SEQUENCE,
@@ -27,7 +28,6 @@ from .schema import (
     Page,
     atomic_write_text,
 )
-from .normalize import normalize_text
 from .validate import compare_reads, page_strays
 
 TODO_NAME = "corrections.todo.json"
