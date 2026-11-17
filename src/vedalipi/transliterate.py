@@ -27,6 +27,9 @@ ROMAN_SVARA = {
     "\u1cda": "\u030e",  # double svarita: double vertical line above
 }
 _ROMAN_BACK = {"\u030d": "\u0951", "\u032d": "\u0951", "\u0331": "\u0952", "\u030e": "\u1cda"}
+# m̐ (m + U+0310) with svaras between the m and U+0310. vidyut writes ꣳ carrying a svara that way, and
+# Unicode canonical order keeps a svara there (class 220 before 230), where vidyut no longer sees m̐.
+_M_CANDRABINDU = re.compile("m([\u0951\u0952\u1cda]*)\u0310")
 
 
 def _roman_marks(text: str, table: dict[str, str]) -> str:
@@ -173,7 +176,8 @@ def _roundtrip_key(text: str, script: str = DEVA) -> str:
         return key
     # Roman schemes write the Vedic anusvara ꣳ as m̐, which reads back as candrabindu; they have one set of
     # digits, read back as Devanagari ones; and vidyut reads a word-final "-roṃ" back as र्ॐ, not रों.
-    key = key.replace("्ओं", "ों").replace(A8F3, "ँ")
+    # The stand-in goes in before marks are put in canonical order, so ꣳ next to a svara compares equal.
+    key = normalize_text(key.replace("्ओं", "ों").replace(A8F3, "ँ"))
     return key.translate(_DEVA_DIGITS)
 
 
@@ -190,6 +194,8 @@ def roundtrip_back(converted: str, script: str) -> str:
         # Dandas went out as | and ||, so every dot is a printed dot.
         keep["."] = "\u2024"
     converted = _roman_marks(converted, _ROMAN_BACK).translate(str.maketrans(keep))
+    # m̐ reads as candrabindu (vidyut's own reading of it), its svaras after it.
+    converted = _M_CANDRABINDU.sub(lambda g: "\u0901" + g[1], converted)
     back = _convert(converted, script, DEVA).translate(str.maketrans({v: k for k, v in keep.items()}))
     return back if "|" in punct else back.replace("||", "॥").replace("|", "।")
 

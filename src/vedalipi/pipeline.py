@@ -16,7 +16,17 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from .schema import VALIDATOR_FLAGS, Correction, FlagReport, Manifest, Master, Page, StageRecord, atomic_write_text
+from .schema import (
+    VALIDATOR_FLAGS,
+    Correction,
+    FlagReport,
+    Manifest,
+    Master,
+    Page,
+    PageOrigin,
+    StageRecord,
+    atomic_write_text,
+)
 
 SOURCE_PNG = "source.png"
 PRE_PNG = "pre.png"
@@ -49,6 +59,8 @@ class RunConfig:
     source_script: str = "devanagari"
     # Languages printed in the book (ISO 639-1); empty means Sanskrit only. Tells OCR how to tag blocks.
     languages: tuple[str, ...] = ()
+    # For .txt/.json input: an independent second reading of the same book, compared like --cross-read.
+    second_read: Path | None = None
 
     @property
     def work_dir(self) -> Path:
@@ -265,6 +277,14 @@ def _ingest_text(job: PageJob) -> None:
     page.model_copy(update={"page": job.page}).save(job.path(OCR_JSON))
 
 
+def _ingest_second(job: PageJob) -> None:
+    """The page from the second reading of a text book; an empty page when that reading has fewer pages,
+    so every line of this page shows up as read only once."""
+    pages: list[Page] = job.shared["second_pages"]
+    page = pages[job.page - 1] if job.page <= len(pages) else Page(page=job.page)
+    page.model_copy(update={"page": job.page}).save(job.path(OCR2_JSON))
+
+
 def _preprocess(job: PageJob) -> None:
     from . import preprocess
 
@@ -295,15 +315,20 @@ def cross_backend(name: str, model: str | None, source_script: str = "devanagari
     return backend
 
 
-def _normalize(job: PageJob) -> None:
+def to_master_form(page: Page, source_script: str) -> Page:
+    """An OCR read as the master holds it: Sanskrit converted from the book's script to Devanagari, then
+    normalized. Every read of a page goes through here, so two reads are compared in the same form."""
     from . import normalize
 
-    page = Page.load(job.path(OCR_JSON))
-    if job.cfg.source_script != DEVA:
+    if source_script != DEVA:
         from . import transliterate
 
-        page = transliterate.page_to_devanagari(page, job.cfg.source_script)
-    normalize.normalize_page(page).save(job.path(NORM_JSON))
+        page = transliterate.page_to_devanagari(page, source_script)
+    return normalize.normalize_page(page)
+
+
+def _normalize(job: PageJob) -> None:
+    to_master_form(Page.load(job.path(OCR_JSON)), job.cfg.source_script).save(job.path(NORM_JSON))
 
 
 def _validate(job: PageJob) -> None:
@@ -312,20 +337,22 @@ def _validate(job: PageJob) -> None:
     image, second = job.path(PRE_PNG), job.path(OCR2_JSON)
     # The image svara count finds Devanagari headlines; other scripts have none to find.
     use_image = image.exists() and job.cfg.source_script == DEVA
-    report = validate.validate_page(
-        Page.load(job.path(NORM_JSON)), image if use_image else None, Page.load(second) if second.exists() else None
-    )
+    # The second read is raw OCR in the book's script; norm.json is Devanagari. Compare like with like.
+    other = to_master_form(Page.load(second), job.cfg.source_script) if second.exists() else None
+    report = validate.validate_page(Page.load(job.path(NORM_JSON)), image if use_image else None, other)
     report.save(job.path(FLAGS_JSON))
 
 
 def _validate_fingerprint(job: PageJob) -> str:
+    from .normalize import NORMALIZE_VERSION
     from .validate import VALIDATE_VERSION
 
-    # The page image and a second read are read too, so their content and the checker version all count.
+    # The page image and a second read are read too, so their content and the checker version all count;
+    # the second read is normalized here, so the normalize version counts as well.
     image, second = job.path(PRE_PNG), job.path(OCR2_JSON)
     src = "" if job.cfg.source_script == DEVA else f":src={job.cfg.source_script}"
     return (
-        f"v{VALIDATE_VERSION}:image={sha256_file(image) if image.exists() else 'none'}"
+        f"v{VALIDATE_VERSION}:n{NORMALIZE_VERSION}:image={sha256_file(image) if image.exists() else 'none'}"
         f":second={sha256_file(second) if second.exists() else 'none'}{src}"
     )
 
@@ -337,16 +364,19 @@ def _normalize_fingerprint(job: PageJob) -> str:
     return f"v{NORMALIZE_VERSION}" + ("" if job.cfg.source_script == DEVA else f":src={job.cfg.source_script}")
 
 
-def default_stages(input_kind: str, *, cross_read: bool = False) -> list[Stage]:
+def default_stages(input_kind: str, *, cross_read: bool = False, second_read: bool = False) -> list[Stage]:
     """Stage chain for an input kind: image inputs go through OCR, text inputs start at ocr.json.
-    With cross_read, image inputs get a second independent OCR read that validate compares against."""
+    With cross_read, image inputs get a second independent OCR read that validate compares against;
+    with second_read, text inputs take their second read from the --second-read file."""
     doc = lambda job: job.shared["input_hash"] + f":{job.page}"  # noqa: E731
     tail = [
         Stage("normalize", (OCR_JSON,), (NORM_JSON,), _normalize, _normalize_fingerprint),
         Stage("validate", (NORM_JSON,), (FLAGS_JSON,), _validate, _validate_fingerprint),
     ]
     if input_kind in ("text", "json"):
-        return [Stage("ingest", (), (OCR_JSON,), _ingest_text, doc), *tail]
+        second = [Stage("crossread", (), (OCR2_JSON,), _ingest_second,
+                        lambda job: job.shared["second_hash"] + f":{job.page}")] if second_read else []
+        return [Stage("ingest", (), (OCR_JSON,), _ingest_text, doc), *second, *tail]
     return [
         Stage("ingest", (), (SOURCE_PNG,), _ingest, lambda job: doc(job) + f":dpi={job.cfg.dpi}"),
         Stage("preprocess", (SOURCE_PNG,), (PRE_PNG,), _preprocess, lambda job: f"upscale={job.cfg.upscale}"),
@@ -384,48 +414,143 @@ def build_master(
     """Merge norm.json + flags.json for each page into master.json.
 
     Only pass pages whose whole stage chain completed in this run. A page already in the master is
-    replaced only when its norm.json hash changed, so hand corrections survive re-runs that did not
-    re-OCR that page. Pages beyond `num_pages` (left over from a longer earlier input) are dropped.
-    A page whose cache files cannot be read is skipped and reported in `errors`, never fatal.
+    rebuilt only when its norm.json or flags.json changed. Its hand corrections (master.corrections) are
+    then applied again when its OCR text is the one they were made on (normalize or validate changed),
+    and dropped with a warning, saved to corrections.dropped.json, when the OCR text changed. Pages beyond
+    `num_pages` (left over from a longer earlier input) are dropped. A page whose cache files cannot be
+    read is skipped and reported in `errors`, never fatal.
     """
     master = Master.load(cfg.master_path) if cfg.master_path.exists() else Master(title=title)
     master.source = str(cfg.input_path)
     if num_pages is not None:
         prune_pages(master, num_pages)
+    dropped: list[dict] = []
     for p in pages:
         d = page_dir(cfg.work_dir, p)
         norm, flags = d / NORM_JSON, d / FLAGS_JSON
         if not (norm.exists() and flags.exists()):
             continue
         try:
-            _merge_page(master, p, norm, flags)
+            _merge_page(master, p, norm, flags, _origin(cfg, p), dropped)
         except (ValidationError, ValueError, OSError) as e:
             msg = f"unreadable page cache, page left out of master: {type(e).__name__}: {str(e)[:200]}"
             print(f"[p{p:04d}] {msg}", file=sys.stderr)
             if errors is not None:
                 errors.append((p, "master", msg))
+    if dropped:
+        import json
+
+        path = cfg.out_dir / "corrections.dropped.json"
+        old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+        atomic_write_text(path, json.dumps(old + dropped, ensure_ascii=False, indent=1) + "\n")
     master.save(cfg.master_path)
     return master
 
 
-def _merge_page(master: Master, p: int, norm: Path, flags: Path) -> None:
+def _origin(cfg: RunConfig, p: int) -> PageOrigin:
+    job = PageJob(p, page_dir(cfg.work_dir, p), cfg)
+    ocr = job.path(OCR_JSON)
+    return PageOrigin(
+        ocr=sha256_file(ocr) if ocr.exists() else "",
+        normalize_settings=_normalize_fingerprint(job),
+        validate_settings=_validate_fingerprint(job),
+    )
+
+
+# Names for the parts of a stage's settings string ("v3:src=kannada"), for saying what changed.
+_SETTING_NAMES = {"v": "version", "n": "normalize version", "image": "page image", "second": "second read",
+                  "src": "source script"}
+
+
+def _what_changed(stage: str, old: str, new: str) -> str:
+    """ "normalize changed (version 2 -> 3)" from two settings strings; hashes are only said to change."""
+    def parts(s: str) -> dict[str, str]:
+        out = {}
+        for item in s.split(":") if s else []:
+            key, _, val = item.partition("=")
+            if not val:  # "v3", "n2": a letter and a number
+                key, val = item[:1], item[1:]
+            out[key] = val
+        return out
+
+    a, b = parts(old), parts(new)
+    diffs = []
+    for key in dict.fromkeys([*a, *b]):
+        if a.get(key) != b.get(key):
+            name = _SETTING_NAMES.get(key, key)
+            x, y = a.get(key, "devanagari" if key == "src" else "none"), b.get(key, "devanagari" if key == "src" else "none")
+            diffs.append(f"{name} changed" if max(len(x), len(y)) > 20 else f"{name} {x} -> {y}")
+    if not old:
+        return f"{stage} output changed"
+    return f"{stage} changed ({', '.join(diffs)})" if diffs else f"{stage} output changed"
+
+
+def _reapply(master: Master, p: int, mine: list[Correction], dropped: list[dict], why: str) -> int:
+    """Apply page p's recorded corrections again, in order; one that no longer fits is dropped. Returns
+    how many were applied."""
+    kept = 0
+    for c in mine:
+        try:
+            _apply_correction(master, c)
+            kept += 1
+        except (KeyError, ValueError) as e:
+            master.corrections = [x for x in master.corrections if x is not c]
+            dropped.append({"reason": f"{why}; no longer fits: {e}", "correction": c.model_dump(exclude_none=True)})
+            print(f"[p{p:04d}] correction for {c.block_id} no longer fits ({e}); dropped (saved in "
+                  f"corrections.dropped.json)", file=sys.stderr)
+    return kept
+
+
+def _plural(n: int) -> str:
+    return f"{n} correction{'s' if n != 1 else ''}"
+
+
+def _merge_page(master: Master, p: int, norm: Path, flags: Path, origin: PageOrigin, dropped: list[dict]) -> None:
     h, fh = sha256_file(norm), sha256_file(flags)
-    if master.norm_hashes.get(p) == h and any(pg.page == p for pg in master.pages):
+    before = master.origins.get(p)
+    exists = any(pg.page == p for pg in master.pages)
+    mine = [c for c in master.corrections if c.page == p]
+    if master.norm_hashes.get(p) == h and exists:
         if master.flag_hashes.get(p) != fh:
-            # Same text, new validation: swap the validator's flags, keep everything else.
+            # Same text, new validation: swap the validator's flags, keep everything else, and apply the
+            # page's corrections again (a proofreader's cleared flags stay cleared).
             report = FlagReport.load(flags)
-            page = master.page(p)
-            for b in page.blocks:
-                b.flags = [f for f in b.flags if f not in VALIDATOR_FLAGS]
+            if mine:
+                # Corrections are replayed below, and a line insertion or removal is not idempotent: start
+                # from the normalized page, not the already corrected one.
+                page = Page.load(norm)
+            else:
+                page = master.page(p)
+                for b in page.blocks:
+                    b.flags = [f for f in b.flags if f not in VALIDATOR_FLAGS]
             master.upsert_page(report.apply_to(page))
             master.flag_hashes[p] = fh
+            if mine:
+                why = _what_changed("validate", before.validate_settings if before else "", origin.validate_settings)
+                n = _reapply(master, p, mine, dropped, why)
+                print(f"[p{p:04d}] {why}: flags refreshed, {_plural(n)} re-applied", file=sys.stderr)
+        master.origins[p] = origin
         return
     report, page = FlagReport.load(flags), Page.load(norm)
-    if p in master.norm_hashes:
-        print(f"[p{p:04d}] OCR changed; master page replaced (earlier corrections for it are dropped)", file=sys.stderr)
     master.upsert_page(report.apply_to(page))
+    same_ocr = before is not None and before.ocr != "" and before.ocr == origin.ocr
+    if exists and mine:
+        if same_ocr:
+            why = _what_changed("normalize", before.normalize_settings, origin.normalize_settings)
+            n = _reapply(master, p, mine, dropped, why)
+            print(f"[p{p:04d}] {why}; OCR text unchanged: page rebuilt, {_plural(n)} re-applied", file=sys.stderr)
+        else:
+            master.corrections = [c for c in master.corrections if c.page != p]
+            dropped.extend({"reason": "OCR text changed", "correction": c.model_dump(exclude_none=True)} for c in mine)
+            print(f"[p{p:04d}] OCR text changed: page rebuilt, {_plural(len(mine))} dropped "
+                  f"(saved in corrections.dropped.json)", file=sys.stderr)
+    elif exists and before is None and p in master.norm_hashes:
+        # A master made before corrections were recorded: hand edits to this page cannot be told apart.
+        print(f"[p{p:04d}] page rebuilt; this master predates recorded corrections, so hand edits made to "
+              f"this page before, if any, are lost", file=sys.stderr)
     master.norm_hashes[p] = h
     master.flag_hashes[p] = fh
+    master.origins[p] = origin
 
 
 def prune_pages(master: Master, num_pages: int) -> None:
@@ -438,31 +563,55 @@ def prune_pages(master: Master, num_pages: int) -> None:
     master.flag_hashes = {k: v for k, v in master.flag_hashes.items() if k <= num_pages}
 
 
-def apply_corrections(master: Master, corrections: list[Correction]) -> Master:
-    """Apply hand edits to a copy of master; fields left as None are unchanged."""
+def apply_corrections(master: Master, corrections: list[Correction], *, record: bool = True) -> Master:
+    """Apply hand edits to a copy of master; fields left as None are unchanged. With `record`, the
+    corrections are added to master.corrections so later rebuilds of their pages can apply them again."""
     out = master.model_copy(deep=True)
     for c in corrections:
-        block = out.page(c.page).block(c.block_id)
-        if c.bbox is not None:
-            block.bbox = c.bbox
-        if c.type is not None:
-            block.type = c.type
-            if c.type == "image":
-                # A drawing carries no typeset text of its own: only its labels, if any.
-                block.lines, block.rows = [], None
-        if c.labels is not None:
-            block.labels = c.labels
-        if c.lines is not None:
-            block.lines = c.lines
-        if c.rows is not None:
-            block.rows = c.rows
-        if c.flags is not None:
-            block.flags = c.flags
-        if c.level is not None:
-            block.level = c.level
-        if c.align is not None:
-            block.align = c.align
+        _apply_correction(out, c)
+    if record:
+        out.corrections = [*out.corrections, *corrections]
     return Master.model_validate(out.model_dump())
+
+
+def _apply_correction(master: Master, c: Correction) -> None:
+    """Apply one correction to master in place; KeyError when its page or block is gone, ValueError when
+    a line it edits is not there. Sanskrit text in a correction is normalized exactly like OCR text, so a
+    corrected line follows the same rules as every other line of the master."""
+    from .normalize import normalize_text
+
+    block = master.page(c.page).block(c.block_id)
+    sa = normalize_text if block.is_sanskrit else (lambda t: t)
+    if c.bbox is not None:
+        block.bbox = c.bbox
+    if c.type is not None:
+        block.type = c.type
+        if c.type == "image":
+            # A drawing carries no typeset text of its own: only its labels, if any.
+            block.lines, block.rows = [], None
+    if c.labels is not None:
+        block.labels = [lab.model_copy(update={"text": normalize_text(lab.text)}) if lab.is_sanskrit else lab
+                        for lab in c.labels]
+    if c.lines is not None:
+        block.lines = [sa(line) for line in c.lines]
+    if c.set_lines:
+        lines = list(block.lines)
+        for n in sorted(c.set_lines, reverse=True):  # from the bottom, so a split line moves no line above it
+            if not 1 <= n <= len(lines):
+                raise ValueError(f"{c.block_id} has no line {n}")
+            text = c.set_lines[n]
+            lines[n - 1 : n] = [sa(t) for t in text.split("\n")] if text != "" else []
+        block.lines = lines
+    if c.rows is not None:
+        block.rows = [[sa(cell) for cell in row] for row in c.rows]
+    if c.flags is not None:
+        block.flags = c.flags
+    if c.clear_flags:
+        block.flags = [f for f in block.flags if f not in c.clear_flags]
+    if c.level is not None:
+        block.level = c.level
+    if c.align is not None:
+        block.align = c.align
 
 
 def diagnostics_path(out_dir: Path, script: str) -> Path:
@@ -547,11 +696,19 @@ def _run(cfg: RunConfig) -> tuple[StageRunner, Path | None]:
     from . import ingest
 
     kind = ingest.input_kind(cfg.input_path)
+    if cfg.second_read is not None and kind not in ("text", "json"):
+        raise ValueError("--second-read is for .txt/.json input; for a scan use --cross-read")
     input_hash = sha256_input(cfg.input_path)
     shared: dict = {"input_hash": input_hash}
     if kind in ("text", "json"):
         shared["text_pages"] = ingest.load_text_pages(cfg.input_path)
         num_pages = len(shared["text_pages"])
+        if cfg.second_read is not None:
+            shared["second_pages"] = ingest.load_text_pages(cfg.second_read)
+            shared["second_hash"] = sha256_input(cfg.second_read)
+            if len(shared["second_pages"]) != num_pages:
+                print(f"second read has {len(shared['second_pages'])} pages, the book {num_pages}; pages it lacks "
+                      "are read only once", file=sys.stderr)
     else:
         from .ocr import get_backend
 
@@ -574,15 +731,52 @@ def _run(cfg: RunConfig) -> tuple[StageRunner, Path | None]:
             # Records of pages the new input does not have are dropped (their spend is history, not cache).
             pages={p: recs for p, recs in (manifest.pages if manifest else {}).items() if p <= num_pages},
         )
+    manifest.source_script = cfg.source_script
     manifest.save(cfg.manifest_path)
 
     pages = parse_pages(cfg.pages, num_pages)
-    runner = StageRunner(default_stages(kind, cross_read=cfg.cross_read), manifest, cfg, shared)
+    stages = default_stages(kind, cross_read=cfg.cross_read, second_read=cfg.second_read is not None)
+    runner = StageRunner(stages, manifest, cfg, shared)
     runner.run(pages)
     build_master(cfg, sorted(runner.completed), title=cfg.input_path.stem, num_pages=num_pages, errors=runner.failed)
     if runner.failed:
         return runner, None
     return runner, _render(cfg.out_dir, cfg.script, side_by_side=cfg.side_by_side)
+
+
+def _stray_lines(master: Master) -> list[str]:
+    """Every source letter left unconverted and every non-Vedic mark in the master's Sanskrit, read from the
+    text itself (so hand corrections show), one line per string and character, with totals per character."""
+    from .validate import page_strays
+
+    found = [(pg.page, s) for pg in master.pages for s in page_strays(pg)]
+    if not found:
+        return []
+    out = ["stray characters in Sanskrit text (kept as read; proofread against the scan):"]
+    totals: dict[tuple[str, str], int] = {}
+    for page, s in found:
+        out.append(f"  p{page}:{s.note()}")
+        totals[(s.flag, s.name)] = totals.get((s.flag, s.name), 0) + s.count
+    for (flag, name), n in sorted(totals.items()):
+        out.append(f"  total: {flag} {name} x{n}")
+    return out
+
+
+def _single_read_lines(out_dir: Path, master: Master) -> list[str]:
+    """Lines only one of the two reads has, from each master page's flags.json notes."""
+    out: list[str] = []
+    for pg in master.pages:
+        flags = page_dir(Path(out_dir) / "work", pg.page) / FLAGS_JSON
+        if not flags.exists():
+            continue
+        try:
+            notes = FlagReport.load(flags).notes
+        except (ValidationError, ValueError, OSError):
+            continue
+        out += [f"  p{pg.page}:{n}" for n in notes if ": single_read: " in n]
+    if out:
+        out.insert(0, "lines only one read has (no second read checks them; proofread against the scan):")
+    return out
 
 
 def report(out_dir: Path) -> str:
@@ -626,6 +820,8 @@ def report(out_dir: Path) -> str:
         lines.append(f"master: {len(master.pages)} pages")
         for f, where in sorted(flagged.items()):
             lines.append(f"  {f}: {len(where)} ({', '.join(where[:10])}{' ...' if len(where) > 10 else ''})")
+        lines += _stray_lines(master)
+        lines += _single_read_lines(out_dir, master)
     for diag in sorted((out_dir / "work").glob("transliterate-*.json")):
         items = json.loads(diag.read_text(encoding="utf-8"))
         script = diag.stem.removeprefix("transliterate-")

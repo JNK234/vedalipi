@@ -1,4 +1,4 @@
-# ABOUTME: Ingest stage: identifies the input kind (PDF, image folder, Devanagari .txt/.json) and yields source pages.
+# ABOUTME: Ingest stage: identifies the input kind (PDF, image folder, .txt/.json text) and yields source pages.
 # ABOUTME: Image inputs become one source.png per page; text inputs become Page objects that skip OCR entirely.
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ def _image_files(path: Path) -> list[Path]:
 
 
 def input_kind(path: Path) -> InputKind:
-    """Classify the input: a .pdf file, a directory of page images, a Devanagari .txt, or a page-contract .json."""
+    """Classify the input: a .pdf file, a directory of page images, a Sanskrit .txt, or a page-contract .json."""
     path = Path(path)
     if path.is_dir():
         return "images"
@@ -153,10 +153,13 @@ def _pages_from_json(data: object) -> list[Page]:
 
 
 def load_text_pages(path: Path) -> list[Page]:
-    """Load a Devanagari .txt (form-feed or blank-line page breaks) or a page-contract .json into Pages.
+    """Load a Sanskrit .txt (form-feed or blank-line page breaks) or a page-contract .json into Pages.
 
-    A .json may be a single page, a list of pages, or a master.json. Returned pages have lang="sa"
-    blocks with no bbox and an empty source_image.
+    The text stays in the script it is written in; the normalize stage converts its Sanskrit from
+    --source-script to the Devanagari master, exactly as it does for OCR output.
+
+    A .json may be a single page, a list of pages, or a master.json; its blocks keep their own lang.
+    A .txt page is one lang="sa" block with no bbox and an empty source_image.
     """
     path = Path(path)
     kind = input_kind(path)

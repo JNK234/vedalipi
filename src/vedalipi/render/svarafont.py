@@ -1,5 +1,5 @@
 # ABOUTME: Derives "Vedalipi" copies of the vendored Noto fonts whose Vedic svara marks are heavier and set lower.
-# ABOUTME: Only the svara outlines change (cmap, GSUB and GPOS stay as shipped), so shaping and the text layer are untouched.
+# ABOUTME: Svara outlines change and Latin combining marks are added; existing glyphs, GSUB and GPOS stay as shipped.
 
 from __future__ import annotations
 
@@ -21,7 +21,13 @@ TICK_RAISE = 0.0  # extra height added on top of each tick (none: tall bases alr
 BAR_THICKNESS = 0.10  # anudatta bar thickness (grows downward)
 BAR_DROP = 0.045  # anudatta bar moves down by this much (more clearance from the akshara)
 SHALLOW_BAR = 0.15  # a bar whose top is within this of the baseline is the default (undropped) anudatta
-VERSION = 3  # bump when the geometry changes so cached derived fonts are rebuilt
+VERSION = 4  # bump when the geometry or the added glyphs change so cached derived fonts are rebuilt
+
+# Latin combining marks (U+0300-U+036F). OCR sometimes reads a svara as one of them (U+0331 for an anudatta
+# bar); the text keeps it and validate flags it. Without a glyph here, Typst draws the mark from Noto Serif,
+# which splits the akshara over two fonts and corrupts the PDF text layer (the letter under it extracts as
+# nothing, the mark twice). The marks are copied from Noto Serif, so they print as the Latin mark that was read.
+LATIN_MARKS = range(0x0300, 0x0370)
 
 
 def derived_family(family: str) -> str:
@@ -89,6 +95,47 @@ def recut_svaras(font) -> int:
     return changed
 
 
+def add_latin_marks(font, donor) -> int:
+    """Copy every LATIN_MARKS glyph `donor` has and `font` lacks into `font` in place; returns glyphs added.
+
+    Outlines are flattened (no components) and scaled to the font's em. New glyphs go after all existing
+    ones, so every glyph id, GSUB and GPOS lookup of the font is unchanged; GDEF marks them as marks."""
+    from fontTools.pens.recordingPen import DecomposingRecordingPen
+    from fontTools.pens.transformPen import TransformPen
+    from fontTools.pens.ttGlyphPen import TTGlyphPen
+
+    have, give = font.getBestCmap(), donor.getBestCmap()
+    wanted = [cp for cp in LATIN_MARKS if cp in give and cp not in have]
+    if not wanted:
+        return 0
+    scale = font["head"].unitsPerEm / donor["head"].unitsPerEm
+    donor_glyphs = donor.getGlyphSet()
+    order = list(font.getGlyphOrder())
+    glyf, hmtx = font["glyf"], font["hmtx"]
+    tables = [t for t in font["cmap"].tables if t.isUnicode()]
+    gdef = font["GDEF"].table if "GDEF" in font and font["GDEF"].table.GlyphClassDef else None
+    for cp in wanted:
+        name = f"vedalipi.uni{cp:04X}"
+        flat = DecomposingRecordingPen(donor_glyphs)
+        donor_glyphs[give[cp]].draw(flat)
+        pen = TTGlyphPen(None)
+        flat.replay(TransformPen(pen, (scale, 0, 0, scale, 0, 0)))
+        glyph = pen.glyph()
+        order.append(name)
+        glyf.glyphs[name] = glyph
+        glyph.recalcBounds(glyf)
+        advance, _ = donor["hmtx"][give[cp]]
+        hmtx.metrics[name] = (round(advance * scale), getattr(glyph, "xMin", 0))
+        for t in tables:
+            if t.format in (4, 12) or cp <= 0xFFFF:
+                t.cmap[cp] = name
+        if gdef is not None:
+            gdef.GlyphClassDef.classDefs[name] = 3  # mark
+    font.setGlyphOrder(order)
+    glyf.glyphOrder = order
+    return len(wanted)
+
+
 def _rename(font, family: str) -> None:
     style = font["name"].getDebugName(2) or "Regular"
     ps = family.replace(" ", "") + "-" + style.replace(" ", "")
@@ -110,6 +157,7 @@ def derive_fonts(fonts_dir: Path, out_dir: Path) -> Path:
     renamed so they never shadow the originals, and OFL.txt is copied alongside."""
     from fontTools.ttLib import TTFont
 
+    donors: dict[str, object] = {}
     out_dir = Path(out_dir) / f"v{VERSION}"
     out_dir.mkdir(parents=True, exist_ok=True)
     for src in sorted(Path(fonts_dir).glob("*.ttf")):
@@ -120,6 +168,12 @@ def derive_fonts(fonts_dir: Path, out_dir: Path) -> Path:
             continue
         font = TTFont(src)
         recut_svaras(font)
+        style = "Bold" if src.stem.endswith("Bold") else "Regular"
+        donor = Path(fonts_dir) / f"NotoSerif-{style}.ttf"
+        if donor.exists():
+            if style not in donors:
+                donors[style] = TTFont(donor)
+            add_latin_marks(font, donors[style])
         _rename(font, derived_family(font["name"].getDebugName(1)))
         tmp = dest.with_suffix(".tmp")
         font.save(tmp)

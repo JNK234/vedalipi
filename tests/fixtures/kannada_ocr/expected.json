@@ -1,0 +1,70 @@
+{
+ "about": "Real Kannada OCR output (two independent reads) of three pages of a printed Taittiriya Udaka Shanti book. Mantra verse blocks only. Counts are of the raw files.",
+ "rules": {
+  "gum": "In Sanskrit (lang sa) lines, both the printed forms ಗ್ಂ and ಗ್ಗ್ಂ stand for one U+A8F3 (ꣳ). The proofread Devanagari edition writes the p0064 word ಪರಿ॒ಷ॑ದ್ಯಗ್ಗ್ಂ as परि॒षद्यꣳ॑.",
+  "u0331": "U+0331 is a Latin mark, not a Vedic svara. It must be flagged, never silently kept or replaced.",
+  "cross_read": "p0005 read1 and read2 disagree on svaras in the Ganapati mantra (read1 क॑विं, read2 क॒विं; the printed page has क॒विं). After conversion to Devanagari, those lines must get reader_disagreement."
+ },
+ "files": {
+  "p0005.read1.json": {
+   "lines": 7,
+   "gum_forms": 1,
+   "of_which_doubled_ಗ್ಗ್ಂ": 0,
+   "expected_A8F3_after_normalize": 1,
+   "u0331": 0,
+   "u0951": 22,
+   "u0952": 20,
+   "u1cda": 1
+  },
+  "p0005.read2.json": {
+   "lines": 7,
+   "gum_forms": 1,
+   "of_which_doubled_ಗ್ಗ್ಂ": 0,
+   "expected_A8F3_after_normalize": 1,
+   "u0331": 0,
+   "u0951": 20,
+   "u0952": 24,
+   "u1cda": 1
+  },
+  "p0010.read1.json": {
+   "lines": 17,
+   "gum_forms": 5,
+   "of_which_doubled_ಗ್ಗ್ಂ": 0,
+   "expected_A8F3_after_normalize": 5,
+   "u0331": 0,
+   "u0951": 45,
+   "u0952": 78,
+   "u1cda": 2
+  },
+  "p0010.read2.json": {
+   "lines": 11,
+   "gum_forms": 5,
+   "of_which_doubled_ಗ್ಗ್ಂ": 0,
+   "expected_A8F3_after_normalize": 5,
+   "u0331": 0,
+   "u0951": 30,
+   "u0952": 48,
+   "u1cda": 0
+  },
+  "p0064.read1.json": {
+   "lines": 17,
+   "gum_forms": 7,
+   "of_which_doubled_ಗ್ಗ್ಂ": 1,
+   "expected_A8F3_after_normalize": 7,
+   "u0331": 26,
+   "u0951": 52,
+   "u0952": 42,
+   "u1cda": 6
+  },
+  "p0064.read2.json": {
+   "lines": 17,
+   "gum_forms": 7,
+   "of_which_doubled_ಗ್ಗ್ಂ": 1,
+   "expected_A8F3_after_normalize": 7,
+   "u0331": 0,
+   "u0951": 43,
+   "u0952": 79,
+   "u1cda": 10
+  }
+ }
+}
