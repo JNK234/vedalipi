@@ -346,6 +346,7 @@ def _block_data(
     index: int, meaning: BlockTranslation | None = None, meaning_lang: str = "en", translated: bool = False,
 ) -> dict:
     d: dict = {"id": block.id, "type": block.type, "align": block.align, "level": block.level or 1, **_font(block, script)}
+    d["text_lang"] = block.lang  # the text's own language (sa for transliterated Sanskrit), apart from the font's
     d["tight_above"] = d["tight_below"] = False
     d["lines"] = [keep_verse_number(line) for line in block.lines]
     d["rows"] = block.rows or []

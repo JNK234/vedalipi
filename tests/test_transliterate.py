@@ -150,3 +150,13 @@ def test_diagnostics_record_failed_lines_and_unknown_script_is_rejected():
     assert [(d["page"], d["block"], d["text"]) for d in diags] == [(1, "b1", "ऩ क")]
     with pytest.raises(ValueError, match="unsupported script"):
         transliterate.transliterate_master(Master(), "klingon")
+
+
+def test_page_to_devanagari_restores_the_vedic_anusvara_stand_in():
+    from vedalipi.schema import Block, Page
+
+    for script, stand_in in (("kannada", "ಗ್ಂ"), ("telugu", "గ్ం")):
+        word = transliterate.transliterate_text("तुष्टु॒वाꣳस॑", script)
+        assert stand_in in word
+        page = Page(page=1, blocks=[Block(id="b1", type="verse", lines=[word])])
+        assert transliterate.page_to_devanagari(page, script).blocks[0].lines == ["तुष्टु॒वाꣳस॑"]

@@ -1,5 +1,5 @@
-# ABOUTME: Ingest stage: identifies the input kind (PDF, image folder, Devanagari .txt/.json) and yields source pages.
-# ABOUTME: Image inputs become one source.png per page; text inputs become Page objects that skip OCR entirely.
+# ABOUTME: Ingest stage: identifies the input kind (PDF, image folder, Devanagari .txt/.json, EPUB) and yields source pages.
+# ABOUTME: Image inputs become one source.png per page; text inputs (including EPUB) become Page objects that skip OCR entirely.
 
 from __future__ import annotations
 
@@ -10,7 +10,9 @@ from typing import Literal
 
 from .schema import Page
 
-InputKind = Literal["pdf", "images", "text", "json"]
+InputKind = Literal["pdf", "images", "text", "json", "epub"]
+# Inputs that are already text: they start the stage chain at ocr.json and never see OCR.
+TEXT_KINDS = ("text", "json", "epub")
 
 # Image file extensions accepted in a folder input.
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"}
@@ -29,7 +31,8 @@ def _image_files(path: Path) -> list[Path]:
 
 
 def input_kind(path: Path) -> InputKind:
-    """Classify the input: a .pdf file, a directory of page images, a Devanagari .txt, or a page-contract .json."""
+    """Classify the input: a .pdf file, a directory of page images, a Devanagari .txt, a page-contract .json,
+    or an .epub e-book."""
     path = Path(path)
     if path.is_dir():
         return "images"
@@ -40,7 +43,9 @@ def input_kind(path: Path) -> InputKind:
         return "text"
     if suffix == ".json":
         return "json"
-    raise ValueError(f"unsupported input {path}: expected a pdf, image folder, .txt or .json")
+    if suffix == ".epub":
+        return "epub"
+    raise ValueError(f"unsupported input {path}: expected a pdf, image folder, .txt, .json or .epub")
 
 
 def page_count(path: Path) -> int:
@@ -152,10 +157,14 @@ def _pages_from_json(data: object) -> list[Page]:
     return pages
 
 
-def load_text_pages(path: Path) -> list[Page]:
-    """Load a Devanagari .txt (form-feed or blank-line page breaks) or a page-contract .json into Pages.
+def load_text_pages(
+    path: Path, *, assets_dir: Path | None = None, source_script: str = "devanagari", languages: tuple[str, ...] = ()
+) -> list[Page]:
+    """Load a Devanagari .txt (form-feed or blank-line page breaks), a page-contract .json, or an .epub into Pages.
 
-    A .json may be a single page, a list of pages, or a master.json. Returned pages have lang="sa"
+    A .json may be a single page, a list of pages, or a master.json. An .epub is read from its spine (see
+    ingest_epub): `source_script` and `languages` decide each block's language, and its images are written
+    under `assets_dir` as one canvas per page (dropped when None). Returned .txt/.json pages have lang="sa"
     blocks with no bbox and an empty source_image.
     """
     path = Path(path)
@@ -164,4 +173,21 @@ def load_text_pages(path: Path) -> list[Page]:
         return _pages_from_text(path.read_text(encoding="utf-8"))
     if kind == "json":
         return _pages_from_json(json.loads(path.read_text(encoding="utf-8")))
-    raise ValueError(f"{path}: load_text_pages needs a .txt or .json input, got {kind}")
+    if kind == "epub":
+        from .ingest_epub import load_epub_pages
+
+        return load_epub_pages(path, assets_dir=assets_dir, source_script=source_script, languages=languages)
+    raise ValueError(f"{path}: load_text_pages needs a .txt, .json or .epub input, got {kind}")
+
+
+def document_title(path: Path) -> str:
+    """The book's own title when the input carries one (an EPUB's dc:title), else the file stem."""
+    path = Path(path)
+    if input_kind(path) == "epub":
+        from .ingest_epub import epub_title
+
+        try:
+            return epub_title(path) or path.stem
+        except (OSError, ValueError, KeyError):
+            return path.stem
+    return path.stem

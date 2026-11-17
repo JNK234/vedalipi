@@ -152,15 +152,30 @@ def page_to_devanagari(page: Page, script: str) -> Page:
     Text in other languages (e.g. Telugu instructions) keeps its own script. Svara marks pass through unchanged.
     """
     out = page.model_copy(deep=True)
+    back = lambda text: _restore_a8f3(_convert(text, script, DEVA), script)  # noqa: E731
     for block in out.blocks:
         if block.is_sanskrit:
-            block.lines = [_convert(line, script, DEVA) for line in block.lines]
+            block.lines = [back(line) for line in block.lines]
             if block.rows is not None:
-                block.rows = [[_convert(c, script, DEVA) for c in row] for row in block.rows]
+                block.rows = [[back(c) for c in row] for row in block.rows]
         for label in block.labels or []:
             if label.is_sanskrit:
-                label.text = _convert(label.text, script, DEVA)
+                label.text = back(label.text)
     return out
+
+
+@lru_cache(maxsize=None)
+def _a8f3_readback(script: str) -> str | None:
+    """What the script's U+A8F3 stand-in (ಗ್ಂ, గ్ం) reads back as in Devanagari (ग्ं), or None."""
+    stand_in = DEFAULT_A8F3.get(script)
+    return _convert(stand_in, script, DEVA) if stand_in else None
+
+
+def _restore_a8f3(text: str, script: str) -> str:
+    """Books in Kannada or Telugu print ꣳ as ಗ್ಂ / గ్ం; read back into Devanagari that is ग्ं, a sequence
+    (consonant + virama + anusvara) real Sanskrit never has, so it is restored to ꣳ."""
+    rb = _a8f3_readback(script)
+    return text.replace(rb, A8F3) if rb and rb in text else text
 
 
 _DEVA_DIGITS = str.maketrans("0123456789", "०१२३४५६७८९")

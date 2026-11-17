@@ -8,7 +8,7 @@ import unicodedata
 from .schema import Page
 
 # Part of the normalize stage fingerprint: bump when normalize_text changes so cached norm.json is redone.
-NORMALIZE_VERSION = "1"
+NORMALIZE_VERSION = "2"  # 2: ꣳ restored from its Kannada/Telugu stand-in when the source script is one of those
 
 _VIRAMA = "्"
 _NUKTA = "़"

@@ -1,7 +1,7 @@
 [project]
 name = "vedalipi"
 version = "0.1.0"
-description = "Transliterate scanned Sanskrit books into other Indic scripts as clean PDFs"
+description = "Transliterate scanned Sanskrit books into other Indic scripts as clean PDFs and EPUBs"
 readme = "README.md"
 authors = [
     { name = "JNK234", email = "jwalapuramnarasimha@gmail.com" }

@@ -255,7 +255,8 @@ class Master(_JsonModel):
 
 class Correction(_JsonModel):
     """One hand edit to master.json: replace lines and/or rows of a block, set its flags, or fix its
-    heading level or alignment. Fields left out stay as they are.
+    heading level, alignment or language (e.g. a block an EPUB import took for Telugu that is Sanskrit).
+    Fields left out stay as they are.
 
     Setting type "image" turns the block into a drawing: its lines and rows are cleared, and it keeps its
     bbox unless one is given. labels sets the text labels drawn inside an image block."""
@@ -263,6 +264,7 @@ class Correction(_JsonModel):
     page: int
     block_id: str
     type: BlockType | None = None
+    lang: str | None = None
     bbox: list[float] | None = None
     labels: list[Label] | None = None
     lines: list[str] | None = None

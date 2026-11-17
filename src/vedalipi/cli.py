@@ -1,5 +1,5 @@
 # ABOUTME: Command-line entry point "vedalipi": run, render, report, judge and apply-corrections.
-# ABOUTME: Thin argparse layer over pipeline.py; all work and caching happen in the pipeline.
+# ABOUTME: Thin argparse layer over pipeline.py; all work and caching happen in the pipeline. Output is PDF, EPUB or both.
 
 from __future__ import annotations
 
@@ -11,6 +11,14 @@ from pathlib import Path
 from . import pipeline
 from .transliterate import supported_scripts
 from .schema import Correction, Master
+
+
+FORMAT_CHOICES = ("pdf", "epub", "both")
+
+
+def _formats(choice: str) -> tuple[str, ...]:
+    """--format value -> the formats to render, PDF first."""
+    return pipeline.FORMATS if choice == "both" else (choice,)
 
 
 def _cmd_run(a: argparse.Namespace) -> int:
@@ -30,14 +38,16 @@ def _cmd_run(a: argparse.Namespace) -> int:
         cross_read=a.cross_read,
         source_script=a.source_script,
         languages=tuple(x.strip() for x in a.languages.split(",") if x.strip()) if a.languages else (),
+        formats=_formats(a.format),
     )
-    runner, pdf = pipeline.run(cfg)
+    runner, outputs = pipeline.run(cfg)
     print(f"stages run: {len(runner.ran)}, cached: {len(runner.skipped)}, failed: {len(runner.failed)}")
     print(f"master: {cfg.master_path}")
-    if pdf is None:
+    if outputs is None:
         print("not rendered: some pages failed (see `vedalipi report`)", file=sys.stderr)
         return 1
-    print(f"pdf: {pdf}")
+    for fmt, path in outputs.items():
+        print(f"{fmt}: {path}")
     return 0
 
 
@@ -54,9 +64,10 @@ def _cmd_render(a: argparse.Namespace) -> int:
             tpath = translate.translation_path(out_dir, a.translation)
             if tpath.exists():
                 script = Translation.load(tpath).mantra_script
-    pdf = pipeline.render_from_master(out_dir, script, side_by_side=a.side_by_side, translation=a.translation,
-                                      all_meanings=a.all_meanings)
-    print(f"pdf: {pdf}")
+    outputs = pipeline.render_outputs(out_dir, script, _formats(a.format), side_by_side=a.side_by_side,
+                                      translation=a.translation, all_meanings=a.all_meanings)
+    for fmt, path in outputs.items():
+        print(f"{fmt}: {path}")
     return 0
 
 
@@ -130,7 +141,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
 
     r = sub.add_parser("run", help="OCR/ingest INPUT, build master.json, render the target script")
-    r.add_argument("input", help="scanned PDF, folder of page images, or Devanagari .txt/.json")
+    r.add_argument("input", help="scanned PDF, folder of page images, Devanagari .txt/.json, or an .epub e-book "
+                                 "(read from its text, no OCR)")
     r.add_argument("--out", required=True, help="output directory (cache lives in OUT/work)")
     r.add_argument("--script", default="kannada", choices=supported_scripts(), metavar="SCRIPT",
                    help="target script: kannada (default), telugu, or any vidyut script name")
@@ -145,6 +157,9 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--dpi", type=int, default=300, help="rasterization DPI for vector PDFs")
     r.add_argument("--upscale", type=float, default=1.5, help="preprocess upscale factor")
     r.add_argument("--side-by-side", action="store_true", help="typeset Devanagari next to the target script")
+    r.add_argument("--format", default="pdf", choices=FORMAT_CHOICES,
+                   help="output: pdf (default, print layout), epub (reflowable e-book for iPad, iPhone and other "
+                        "readers, fonts embedded) or both")
     r.add_argument("--cross-read", action="store_true",
                    help="OCR every page a second time and flag lines the two reads disagree on (doubles OCR cost)")
     r.add_argument("--source-script", default="devanagari", choices=supported_scripts(), metavar="SCRIPT",
@@ -161,6 +176,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="target script: kannada (default), telugu, iast, or any vidyut script name; with "
                          "--translation the default is the script the translation was made for")
     rd.add_argument("--side-by-side", action="store_true")
+    rd.add_argument("--format", default="pdf", choices=FORMAT_CHOICES,
+                    help="output: pdf (default), epub (reflowable e-book for iPad, iPhone and other readers, "
+                         "fonts embedded) or both")
     rd.add_argument("--translation", metavar="LANG",
                     help="render the translated edition from DIR/translation.LANG.json (see `vedalipi translate`)")
     rd.add_argument("--all-meanings", action="store_true",
