@@ -1,6 +1,6 @@
 # vedalipi
 
-vedalipi turns a Sanskrit book into the same book in another Indic script. The input is a scanned PDF, a folder of page images, or Devanagari text. The output is a typeset PDF in Kannada, Telugu or any other script that [vidyut](https://pypi.org/project/vidyut/) supports. The text is transliterated and never edited. Vedic svaras are kept exactly: svarita U+0951, anudatta U+0952, double svarita U+1CDA, and ꣳ U+A8F3.
+vedalipi turns a Sanskrit book into the same book in another Indic script. The input is a scanned PDF, a folder of page images, Devanagari text, or an EPUB e-book. The output is a typeset PDF, or a reflowable EPUB for an iPad, iPhone or any e-reader, in Kannada, Telugu or any other script that [vidyut](https://pypi.org/project/vidyut/) supports. The text is transliterated and never edited. Vedic svaras are kept exactly: svarita U+0951, anudatta U+0952, double svarita U+1CDA, and ꣳ U+A8F3.
 
 ## Install
 
@@ -23,6 +23,10 @@ uv run vedalipi run book.pdf --script kannada --out out/book --jobs 6
 uv run vedalipi render out/book --script telugu
 uv run vedalipi render out/book --script kannada --side-by-side   # Devanagari next to the target script
 
+# An e-book for iPad, iPhone and other readers (or both PDF and EPUB at once)
+uv run vedalipi render out/book --script kannada --format epub
+uv run vedalipi run book.pdf --script telugu --out out/book --format both
+
 # Stage status, OCR cost, flagged blocks, round-trip failures
 uv run vedalipi report out/book
 
@@ -43,6 +47,7 @@ Outputs in `OUT`:
 
 - `master.json`: the Devanagari master, the single source of truth.
 - `<book>.<script>.pdf`: the rendered book, with `master.json` attached to the PDF.
+- `<book>.<script>.epub`: the same book as an e-book (`--format epub` or `both`), with `master.json` inside the package.
 - `work/`: the cache (see below).
 
 ## Stages and cache
@@ -60,7 +65,7 @@ Each page goes through these stages. Each stage writes its output to `OUT/work/p
 
 After the stages, `master.json` is built from `norm.json` and `flags.json`. Rendering then transliterates the master and typesets it with Typst.
 
-`work/manifest.json` records every stage's input hash, status and cost. A re-run skips a stage when its output exists and the hash of its inputs and settings is unchanged. The settings include the backend, model, prompt version and checker versions. Pages run in parallel (`--jobs`), and only a few page images are held in memory at once. An interrupted run resumes where it stopped. Only one process can use an output directory at a time.
+`work/manifest.json` records every stage's input hash, status and cost. A re-run skips a stage when its output exists and the hash of its inputs and settings is unchanged. The settings include the backend, model, prompt version and checker versions. Pages run in parallel (`--jobs`), and only a few page images are held in memory at once. An interrupted run resumes where it stopped. Only one process can use an output directory at a time. Text inputs (.txt, .json, .epub) start the chain at `ocr.json` and never run OCR.
 
 ## OCR backends
 
@@ -100,6 +105,8 @@ uv run vedalipi render out/book --script kannada
 2. `proof` lists every line that needs a check, with the most svara differences between the two reads first. For each line it shows the page, block, line number and reasons, the line as read (in the book's script), the master line, the second read's line, and the words whose svaras differ. It writes `corrections.todo.json` with one entry per line, ready to edit. Running `proof` again keeps what you already wrote there and drops lines that no longer need a check.
 3. In `corrections.todo.json`, check each line against the scan. Fix `text` (the Devanagari master line) when it is wrong, and set `checked` to `true` for every line you have checked, changed or not. To add a line the reader missed, put it after a newline in `text`; an empty `text` removes the line.
 4. `apply-corrections` applies the checked lines. A line that was edited but not checked is reported and not applied. Once every listed line of a block is checked, the block loses its check flags.
+
+A correction can also set `lang`, for example `"lang": "sa"` for a block an EPUB import took for Kannada.
 
 Corrections can also be written by hand:
 
@@ -164,6 +171,23 @@ uv run vedalipi verify out/book             # the script rendered last; or --scr
 
 A page is PASS, or CHECK with its reasons: the flags above, `low_confidence` (the OCR model itself was unsure), `invalid_sequence`, `svara_count_mismatch`, `roundtrip_fail`, a failed stage, and `output_svara_mismatch`. The last one compares, for every Sanskrit line, the number of svarita, anudatta and double svarita marks and of ꣳ in the source text (the text as read, in the book's script; a hand-corrected block is counted from the master) with the number in the target-script output. Each page line shows these counts as source->output. The exit code is 0 when every page passes and 1 otherwise. Clear a block's flags with a correction once it is proofread; a non-Vedic mark or unconverted letter still in the text keeps the page at CHECK. `verify` reads the output folder and writes nothing; `vedalipi report` has the details, and `vedalipi proof` the lines to check (see [Proofreading cycle](#proofreading-cycle)).
 
+## EPUB as input
+
+An e-book needs no OCR: its text is read straight from the EPUB's spine documents into the same page contract, and the run continues at normalize. Everything after that (master, corrections, translation, rendering to PDF or EPUB in any script) works as for a scan.
+
+```sh
+uv run vedalipi run book.epub --script kannada --out out/book                      # a Devanagari e-book
+uv run vedalipi run book.epub --source-script telugu --languages te,sa --script devanagari --out out/book
+```
+
+How the EPUB is read:
+
+- Headings (`h1`–`h6`, with their level), paragraphs, lists (ordered lists keep their numbers), tables, rules and images become blocks. A paragraph with `<br>` breaks, or a `<div>` holding nothing but one `<p>` per line, is a verse with those printed lines; a long prose paragraph is cut into lines at dandas. Runs of dots make a `fill_blank`.
+- Pages: where the publisher kept the printed page breaks (`epub:type="pagebreak"`) they are used, and the printed number becomes the page's `page_number` block. Otherwise each spine document is a page, cut when it grows past about 60 blocks (at a heading once past 40), so one page stays a sensible unit for `--pages`, corrections and translation.
+- Language comes from each block's script, not from the file's `lang` attributes (publishers often tag a whole Devanagari book `lang="en"`). Devanagari is Sanskrit. Text in the `--source-script` is Sanskrit too, unless `--languages` lists that script's own language as well (`--languages kn,sa` for a Kannada book with Kannada instructions): then a block with dandas, svaras or visarga-final words is Sanskrit and the rest is Kannada. A `lang` attribute in the file is honoured only when it names one of the `--languages`. Anything the guess gets wrong is one `lang` correction away.
+- Images are written to `work/assets/` as one canvas per page and cropped into the output like the drawings of a scan.
+- An EPUB that vedalipi wrote carries its Devanagari `master.json`, which is used directly: a Kannada edition re-imported and rendered as Telugu is exact.
+
 ## Translated editions
 
 ```sh
@@ -174,6 +198,18 @@ uv run vedalipi render out/book --translation en      # <book>.iast.en.pdf
 
 `translate` sends each master page to the `claude` CLI and writes `translation.<lang>.json`. Text in other languages is translated. Sanskrit keeps its text in `--mantra-script` (any vidyut scheme), with its meaning, and with `--gloss key` or `all` a word-by-word gloss, set under it. `--context` and `--glossary` (a JSON object of fixed renderings) steer the wording. A page is translated again only when its master text or these settings change, so hand edits to `translation.<lang>.json` survive. Cost is recorded in the manifest under `translate-<lang>`. In roman schemes the svaras print as Latin marks: svarita as a line above (a̍), anudatta as a bar below (a̱) and the double svarita as two lines above (a̎); dandas print as | and ||.
 
+## EPUB for iPad, iPhone and e-readers
+
+`--format epub` (or `both`) writes `<book>.<script>.epub` next to the PDF. It is an EPUB 3 built from the same document tree as the PDF, so it holds exactly the text of the PDF, block for block: every printed line starts a new line (a line too long for the screen wraps with a hanging indent), svara-marked text gets the wider line pitch, fill-in blanks are dotted rules, tables, list markers, separators and image crops are kept, and drawings show their labels in the target script. The edition variants work the same way: `--side-by-side` sets the Devanagari beside each line on a tablet-width screen and stacks the two on a phone, and `--translation LANG` gives the translated edition with its cues, meanings and glosses.
+
+The book is reflowable, so the reader's font size, margins and night theme apply. It is split into chapters at the book's top-level headings (a very long chapter is cut at a source page), with a table of contents from the headings, a page list of the source scan pages, and a quiet "src p. N" label where each scan page begins, as in the PDF. The package validates clean with [EPUBCheck](https://www.w3.org/publishing/epubcheck/).
+
+The fonts are embedded. This matters: the system fonts of an iPad or iPhone cannot place the Vedic marks (U+0951, U+0952, U+1CDA) on Kannada or Telugu letters, so the book embeds the vendored Noto fonts, with the svara-emphasised "Vedalipi" copies for the body text, and tells Apple Books to use them (`ibooks:specified-fonts` and `META-INF/com.apple.ibooks.display-options.xml`). A book with Kannada body text, Telugu instructions and English notes is about 1.5 MB.
+
+To read it on an iPad or iPhone, AirDrop the `.epub` to the device, or put it in iCloud Drive and open it from Files, or send it to yourself and tap it in Mail; it opens in Apple Books. In Apple Books keep the font set to **Original** (the publisher's font): choosing another font replaces the embedded ones, and the svara marks will then sit wrong or show as boxes. Other readers (Kindle via Send to Kindle, Google Play Books, Kobo, Calibre) open the file too, with the same caveat about embedded fonts.
+
+Every chapter of the EPUB is checked to be well-formed before the file is written. `vedalipi judge` checks the PDF only.
+
 ## Adding a script
 
 Every vidyut script name is accepted by `--script`. A script only needs a font: add one line to `SCRIPTS` in `src/vedalipi/render/fonts.py` and put the font file in `fonts/`. Kannada and Telugu replace U+A8F3, which Noto lacks, with ಗ್ಂ and గ్ం (`DEFAULT_A8F3` in `transliterate.py`).
@@ -182,4 +218,6 @@ Every vidyut script name is accepted by `--script`. A script only needs a font: 
 
 ```sh
 uv run pytest -q
+# Also run the official EPUB validator over the test editions (needs java and the epubcheck jar):
+VEDALIPI_EPUBCHECK=/path/to/epubcheck.jar uv run pytest -q tests/test_epub.py
 ```

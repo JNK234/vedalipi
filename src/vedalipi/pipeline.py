@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from .schema import (
     VALIDATOR_FLAGS,
+    Block,
     Correction,
     FlagReport,
     Manifest,
@@ -61,6 +62,8 @@ class RunConfig:
     languages: tuple[str, ...] = ()
     # For .txt/.json input: an independent second reading of the same book, compared like --cross-read.
     second_read: Path | None = None
+    # Output formats to render: "pdf" (print layout) and/or "epub" (reflowable e-book for iPad, iPhone, ...).
+    formats: tuple[str, ...] = ("pdf",)
 
     @property
     def work_dir(self) -> Path:
@@ -373,10 +376,14 @@ def default_stages(input_kind: str, *, cross_read: bool = False, second_read: bo
         Stage("normalize", (OCR_JSON,), (NORM_JSON,), _normalize, _normalize_fingerprint),
         Stage("validate", (NORM_JSON,), (FLAGS_JSON,), _validate, _validate_fingerprint),
     ]
-    if input_kind in ("text", "json"):
+    from .ingest import TEXT_KINDS
+
+    if input_kind in TEXT_KINDS:
+        # The language tagging of an EPUB's blocks follows --source-script and --languages, so they count.
+        text_doc = lambda job: doc(job) + f":src={job.cfg.source_script}:langs={','.join(job.cfg.languages)}"  # noqa: E731
         second = [Stage("crossread", (), (OCR2_JSON,), _ingest_second,
                         lambda job: job.shared["second_hash"] + f":{job.page}")] if second_read else []
-        return [Stage("ingest", (), (OCR_JSON,), _ingest_text, doc), *second, *tail]
+        return [Stage("ingest", (), (OCR_JSON,), _ingest_text, text_doc), *second, *tail]
     return [
         Stage("ingest", (), (SOURCE_PNG,), _ingest, lambda job: doc(job) + f":dpi={job.cfg.dpi}"),
         Stage("preprocess", (SOURCE_PNG,), (PRE_PNG,), _preprocess, lambda job: f"upscale={job.cfg.upscale}"),
@@ -574,6 +581,30 @@ def apply_corrections(master: Master, corrections: list[Correction], *, record: 
     return Master.model_validate(out.model_dump())
 
 
+def _relabel(block: Block, lang: str) -> None:
+    """Give a block a new language and move its text into the script that language has in the master: a
+    Sanskrit block is Devanagari, any other keeps its own language's script. The block's existing text is
+    converted from the script it is written in, so relabelling a mistagged block needs no retyping."""
+    from .ingest_epub import dominant_script
+    from .normalize import normalize_text
+    from .render.fonts import LANG_SCRIPT
+    from .transliterate import _convert, supported_scripts
+
+    target = DEVA if lang == "sa" else LANG_SCRIPT.get(lang)
+    known = set(supported_scripts())
+
+    def move(text: str) -> str:
+        src = dominant_script(text)
+        if target is not None and src not in (None, "latin", target) and src in known and target in known:
+            text = _convert(text, src, target)
+        return normalize_text(text) if lang == "sa" else text
+
+    block.lang = lang
+    block.lines = [move(line) for line in block.lines]
+    if block.rows is not None:
+        block.rows = [[move(c) for c in row] for row in block.rows]
+
+
 def _apply_correction(master: Master, c: Correction) -> None:
     """Apply one correction to master in place; KeyError when its page or block is gone, ValueError when
     a line it edits is not there. Sanskrit text in a correction is normalized exactly like OCR text, so a
@@ -581,6 +612,8 @@ def _apply_correction(master: Master, c: Correction) -> None:
     from .normalize import normalize_text
 
     block = master.page(c.page).block(c.block_id)
+    if c.lang is not None and c.lang != block.lang:  # first: the language decides how the text is normalized
+        _relabel(block, c.lang)
     sa = normalize_text if block.is_sanskrit else (lambda t: t)
     if c.bbox is not None:
         block.bbox = c.bbox
@@ -619,37 +652,75 @@ def diagnostics_path(out_dir: Path, script: str) -> Path:
     return Path(out_dir) / "work" / f"transliterate-{script}.json"
 
 
+FORMATS = ("pdf", "epub")
+
+
+def output_path(
+    out_dir: Path, master: Master, script: str, fmt: str = "pdf", *, side_by_side: bool = False,
+    translation: str | None = None,
+) -> Path:
+    """Where render writes one output: <out>/<source stem>.<script>[.<lang>][.side-by-side].<pdf|epub>."""
+    if fmt not in FORMATS:
+        raise ValueError(f"unknown output format {fmt!r}; choose from {', '.join(FORMATS)}")
+    stem = Path(master.source).stem or "book"
+    lang = f".{translation}" if translation else ""
+    return Path(out_dir) / f"{stem}.{script}{lang}{'.side-by-side' if side_by_side else ''}.{fmt}"
+
+
 def pdf_path(
     out_dir: Path, master: Master, script: str, *, side_by_side: bool = False, translation: str | None = None
 ) -> Path:
-    """Where render writes the PDF of one script: <out>/<source stem>.<script>[.<lang>][.side-by-side].pdf."""
-    stem = Path(master.source).stem or "book"
-    lang = f".{translation}" if translation else ""
-    return Path(out_dir) / f"{stem}.{script}{lang}{'.side-by-side' if side_by_side else ''}.pdf"
+    """Where render writes the PDF of one script (see output_path)."""
+    return output_path(out_dir, master, script, "pdf", side_by_side=side_by_side, translation=translation)
+
+
+def epub_path(
+    out_dir: Path, master: Master, script: str, *, side_by_side: bool = False, translation: str | None = None
+) -> Path:
+    """Where render writes the EPUB of one script (see output_path)."""
+    return output_path(out_dir, master, script, "epub", side_by_side=side_by_side, translation=translation)
 
 
 def render_from_master(
     out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None,
-    all_meanings: bool = False,
+    all_meanings: bool = False, fmt: str = "pdf",
 ) -> Path:
-    """Transliterate master.json into `script` and render <out>/<stem>.<script>.pdf. Never touches OCR.
+    """Transliterate master.json into `script` and render <out>/<stem>.<script>.<fmt>. Never touches OCR.
 
-    With `translation` (a language code), the edition of <out>/translation.<lang>.json: other-language text
-    replaced by its translation, Sanskrit in `script` with its cue before it and its meaning under it. A
-    mantra's meaning prints where it first appears; `all_meanings` prints it at every repeat too."""
+    `fmt` is "pdf" (default) or "epub". With `translation` (a language code), the edition of
+    <out>/translation.<lang>.json: other-language text replaced by its translation, Sanskrit in `script`
+    with its cue before it and its meaning under it. A mantra's meaning prints where it first appears;
+    `all_meanings` prints it at every repeat too."""
     with out_lock(out_dir):
         return _render(Path(out_dir), script, side_by_side=side_by_side, translation=translation,
-                       all_meanings=all_meanings)
+                       all_meanings=all_meanings, formats=(fmt,))[fmt]
+
+
+def render_outputs(
+    out_dir: Path, script: str, formats: Iterable[str] = ("pdf",), *, side_by_side: bool = False,
+    translation: str | None = None, all_meanings: bool = False,
+) -> dict[str, Path]:
+    """Like render_from_master for several formats at once; the master is transliterated only once.
+    Returns {format: output path}."""
+    with out_lock(out_dir):
+        return _render(Path(out_dir), script, side_by_side=side_by_side, translation=translation,
+                       all_meanings=all_meanings, formats=tuple(formats))
 
 
 def _render(
     out_dir: Path, script: str, *, side_by_side: bool = False, translation: str | None = None,
-    all_meanings: bool = False,
-) -> Path:
+    all_meanings: bool = False, formats: tuple[str, ...] = ("pdf",),
+) -> dict[str, Path]:
     import json
 
     from . import transliterate
     from .render import render_pdf
+    from .render.epub import render_epub
+
+    formats = tuple(dict.fromkeys(formats))  # in order, no repeats
+    for fmt in formats:
+        if fmt not in FORMATS:
+            raise ValueError(f"unknown output format {fmt!r}; choose from {', '.join(FORMATS)}")
 
     master = Master.load(out_dir / "master.json")
     diagnostics: list[dict] = []
@@ -677,34 +748,49 @@ def _render(
     atomic_write_text(diagnostics_path(out_dir, script), json.dumps(diagnostics, ensure_ascii=False, indent=1) + "\n")
     for d in diagnostics:
         print(f"[p{d['page']:04d}] {d['block']}: round trip failed: {d['text']!r} -> {d['back']!r}", file=sys.stderr)
-    out_pdf = pdf_path(out_dir, master, script, side_by_side=side_by_side, translation=translation)
-    render_pdf(
-        master, target, out_pdf, script=script, work_dir=out_dir / "work", side_by_side=side_by_side,
-        meanings=meanings, meaning_lang=translation or "en", translated=bool(translation),
+    outputs: dict[str, Path] = {}
+    common = dict(
+        script=script, work_dir=out_dir / "work", side_by_side=side_by_side, meanings=meanings,
+        meaning_lang=translation or "en", translated=bool(translation),
         build_name=f"{script}-{translation}" if translation else None,
     )
-    return out_pdf
+    for fmt in formats:
+        out = output_path(out_dir, master, script, fmt, side_by_side=side_by_side, translation=translation)
+        if fmt == "pdf":
+            render_pdf(master, target, out, **common)
+        else:
+            render_epub(master, target, out, translation=translation, **common)
+        outputs[fmt] = out
+    return outputs
 
 
-def run(cfg: RunConfig) -> tuple[StageRunner, Path | None]:
-    """Full run: ingest -> ... -> validate for selected pages, build master, render the target script."""
+def run(cfg: RunConfig) -> tuple[StageRunner, dict[str, Path] | None]:
+    """Full run: ingest -> ... -> validate for selected pages, build master, render the target script.
+
+    Returns the runner and {format: output path} (cfg.formats), or None when a page failed."""
     with out_lock(cfg.out_dir):
         return _run(cfg)
 
 
-def _run(cfg: RunConfig) -> tuple[StageRunner, Path | None]:
+def _run(cfg: RunConfig) -> tuple[StageRunner, dict[str, Path] | None]:
     from . import ingest
 
     kind = ingest.input_kind(cfg.input_path)
-    if cfg.second_read is not None and kind not in ("text", "json"):
-        raise ValueError("--second-read is for .txt/.json input; for a scan use --cross-read")
+    if cfg.second_read is not None and kind not in ingest.TEXT_KINDS:
+        raise ValueError("--second-read is for .txt/.json/.epub input; for a scan use --cross-read")
+    if cfg.cross_read and kind in ingest.TEXT_KINDS:
+        raise ValueError("--cross-read re-reads scanned pages with OCR; for .txt/.json/.epub input use --second-read")
     input_hash = sha256_input(cfg.input_path)
     shared: dict = {"input_hash": input_hash}
-    if kind in ("text", "json"):
-        shared["text_pages"] = ingest.load_text_pages(cfg.input_path)
+    if kind in ingest.TEXT_KINDS:
+        shared["text_pages"] = ingest.load_text_pages(
+            cfg.input_path, assets_dir=cfg.work_dir / "assets", source_script=cfg.source_script, languages=cfg.languages
+        )
         num_pages = len(shared["text_pages"])
         if cfg.second_read is not None:
-            shared["second_pages"] = ingest.load_text_pages(cfg.second_read)
+            shared["second_pages"] = ingest.load_text_pages(
+                cfg.second_read, source_script=cfg.source_script, languages=cfg.languages
+            )
             shared["second_hash"] = sha256_input(cfg.second_read)
             if len(shared["second_pages"]) != num_pages:
                 print(f"second read has {len(shared['second_pages'])} pages, the book {num_pages}; pages it lacks "
@@ -738,10 +824,11 @@ def _run(cfg: RunConfig) -> tuple[StageRunner, Path | None]:
     stages = default_stages(kind, cross_read=cfg.cross_read, second_read=cfg.second_read is not None)
     runner = StageRunner(stages, manifest, cfg, shared)
     runner.run(pages)
-    build_master(cfg, sorted(runner.completed), title=cfg.input_path.stem, num_pages=num_pages, errors=runner.failed)
+    build_master(cfg, sorted(runner.completed), title=ingest.document_title(cfg.input_path), num_pages=num_pages,
+                 errors=runner.failed)
     if runner.failed:
         return runner, None
-    return runner, _render(cfg.out_dir, cfg.script, side_by_side=cfg.side_by_side)
+    return runner, _render(cfg.out_dir, cfg.script, side_by_side=cfg.side_by_side, formats=cfg.formats)
 
 
 def _stray_lines(master: Master) -> list[str]:

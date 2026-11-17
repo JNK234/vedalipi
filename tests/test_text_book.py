@@ -101,7 +101,8 @@ def test_json_input_in_telugu_becomes_the_devanagari_master(tmp_path):
         Block(id="b2", type="verse", lang="sa", lines=["అ॒గ్నిమీ॑ళే పు॒రోహి॑తం। అహి॑గ్ం"]),
     ]).model_dump_json(), encoding="utf-8")
     cfg = RunConfig(input_path=src, out_dir=tmp_path / "out", source_script="telugu", jobs=1)
-    runner, pdf = pipeline.run(cfg)
+    runner, outputs = pipeline.run(cfg)
+    pdf = outputs["pdf"] if outputs else None
     assert not runner.failed and pdf is not None and pdf.exists()
     page = Master.load(cfg.master_path).page(1)
     assert page.block("b1").lines == ["ఈ మంత్రమును చెప్పవలెను."]  # Telugu prose keeps its script
@@ -142,3 +143,31 @@ def test_second_read_is_only_for_text_input(tmp_path):
     with pytest.raises(ValueError, match="--cross-read"):
         pipeline.run(RunConfig(input_path=tmp_path / "book.pdf", out_dir=tmp_path / "out",
                                second_read=FIXTURES / "book2.kn.txt"))
+
+
+def test_epub_works_with_second_read_and_cross_read_is_refused_for_text(tmp_path):
+    # An EPUB is a text input like .txt/.json: it takes --second-read, its own second read follows the same
+    # --source-script/--languages, and --cross-read (an OCR re-read) is refused instead of silently ignored.
+    from test_ingest_epub import make_epub, xhtml
+
+    line = "ಓಂ ಗ॒ಣಾನಾಂ᳚ ತ್ವಾ ಗ॒ಣಪ॑ತಿಗ್ಂ ಹವಾಮಹೇ ।"
+    book = make_epub(tmp_path / "book.epub", [("a.xhtml", xhtml(f"<p>{line}</p>"))])
+    second = make_epub(tmp_path / "second.epub", [("a.xhtml", xhtml(f"<p>{line}</p>"))])
+    cfg = RunConfig(input_path=book, out_dir=tmp_path / "out", source_script="kannada", languages=("kn", "sa"),
+                    second_read=second, jobs=1)
+    runner, outputs = pipeline.run(cfg)
+    assert not runner.failed and outputs
+    page = Master.load(cfg.master_path).page(1)
+    assert [(b.lang, b.flags) for b in page.blocks] == [("sa", [])]  # the same line read twice: no flags
+    with pytest.raises(ValueError, match="--cross-read"):
+        pipeline.run(RunConfig(input_path=book, out_dir=tmp_path / "out2", cross_read=True, jobs=1))
+
+
+def test_cli_reports_an_input_mistake_without_a_traceback(tmp_path, capsys):
+    from vedalipi.cli import main
+
+    book = tmp_path / "book.kn.txt"
+    book.write_text("ಓಂ ನಮಃ ॥\n", encoding="utf-8")
+    assert main(["run", str(book), "--source-script", "kannada", "--cross-read", "--out", str(tmp_path / "o")]) == 2
+    assert capsys.readouterr().err.strip() == (
+        "vedalipi: --cross-read re-reads scanned pages with OCR; for .txt/.json/.epub input use --second-read")

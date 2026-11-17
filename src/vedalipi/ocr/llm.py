@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 import tempfile
@@ -14,8 +15,6 @@ from ..schema import Page
 from .bands import crop_band, load_gray, plan_bands, stitch
 from .base import OcrBackend, OcrResult
 from .parse import OcrParseError, parse_blocks
-import hashlib
-
 from .prompt import PROMPT_VERSION, retry_prompt, system_prompt, user_prompt
 
 

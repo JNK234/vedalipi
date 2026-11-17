@@ -15,7 +15,6 @@ from vedalipi.ocr.parse import OcrParseError, coerce_block, extract_json, parse_
 from vedalipi.ocr.prompt import PROMPT_VERSION
 from vedalipi.schema import Block, Page
 
-
 # ---------- parsing ----------
 
 def test_extract_json_fenced_with_chatter_and_trailing_commas():

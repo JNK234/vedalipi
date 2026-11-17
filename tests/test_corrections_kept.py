@@ -207,3 +207,19 @@ def test_validate_change_does_not_replay_a_line_insertion_twice(book, tmp_path):
     assert main(["run", str(book), "--second-read", str(second), "--source-script", "kannada", "--script",
                  "telugu", "--out", str(out)]) == 0
     assert Master.load(out / "master.json").page(3).blocks[0].lines == corrected
+
+
+def test_a_lang_only_correction_converts_the_text_it_relabels():
+    # An EPUB block taken for Telugu prose that is really a mantra: setting lang to "sa" must also bring its
+    # text into the Devanagari master; the reverse brings a Devanagari block back into its language's script.
+    from vedalipi.pipeline import apply_corrections
+    from vedalipi.schema import Block, Correction, Page
+
+    master = Master(pages=[Page(page=1, blocks=[
+        Block(id="b1", type="verse", lang="te", lines=["గణానాం త్వా గ॒ణప॑తిగ్ం హవామహే"]),
+        Block(id="b2", type="prose", lang="sa", lines=["इदि तॆलुगु विवरण."]),
+    ])])
+    out = apply_corrections(master, [Correction(page=1, block_id="b1", lang="sa"),
+                                     Correction(page=1, block_id="b2", lang="te")])
+    assert out.page(1).block("b1").lines == ["गणानां त्वा ग॒णप॑तिꣳ हवामहे"]
+    assert out.page(1).block("b2").lines == ["ఇది తెలుగు వివరణ."]
